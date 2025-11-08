@@ -4,6 +4,8 @@
   import path from 'path';
 
   export default defineConfig({
+    // GitHub Pages configuration
+    base: '/',
     plugins: [
       react(), // Fast Refresh is enabled by default
     ],
