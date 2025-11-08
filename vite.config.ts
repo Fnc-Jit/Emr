@@ -4,8 +4,8 @@
   import path from 'path';
 
   export default defineConfig({
-    // GitHub Pages configuration
-    base: '/',
+    // GitHub Pages configuration - use /Emr/ as base path since repo is Emr
+    base: '/Emr/',
     plugins: [
       react(), // Fast Refresh is enabled by default
     ],
