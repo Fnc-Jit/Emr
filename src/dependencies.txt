@@ -1,0 +1,97 @@
+# Dependencies for Health ID Management App
+
+## Core Dependencies
+react
+react-dom
+
+## UI Component Library (Radix UI Primitives)
+@radix-ui/react-accordion
+@radix-ui/react-alert-dialog
+@radix-ui/react-aspect-ratio
+@radix-ui/react-avatar
+@radix-ui/react-checkbox
+@radix-ui/react-collapsible
+@radix-ui/react-context-menu
+@radix-ui/react-dialog
+@radix-ui/react-dropdown-menu
+@radix-ui/react-hover-card
+@radix-ui/react-label
+@radix-ui/react-menubar
+@radix-ui/react-navigation-menu
+@radix-ui/react-popover
+@radix-ui/react-progress
+@radix-ui/react-radio-group
+@radix-ui/react-scroll-area
+@radix-ui/react-select
+@radix-ui/react-separator
+@radix-ui/react-slider
+@radix-ui/react-switch
+@radix-ui/react-tabs
+@radix-ui/react-toggle
+@radix-ui/react-toggle-group
+@radix-ui/react-tooltip
+@radix-ui/react-slot
+
+## Icons
+lucide-react
+
+## Toast Notifications
+sonner@2.0.3
+
+## Utility Libraries
+class-variance-authority
+clsx
+tailwind-merge
+
+## Additional UI Components
+cmdk (Command palette)
+vaul (Drawer component)
+embla-carousel-react (Carousel)
+react-day-picker (Calendar/Date picker)
+date-fns (Date utilities for calendar)
+recharts (Charts and graphs)
+input-otp (OTP input component)
+react-resizable-panels (Resizable panels)
+
+## Styling
+tailwindcss
+autoprefixer
+postcss
+
+## Development Dependencies
+@types/react
+@types/react-dom
+typescript
+vite (or your build tool)
+
+---
+
+## Installation Command
+
+### Using npm:
+```bash
+npm install react react-dom @radix-ui/react-accordion @radix-ui/react-alert-dialog @radix-ui/react-aspect-ratio @radix-ui/react-avatar @radix-ui/react-checkbox @radix-ui/react-collapsible @radix-ui/react-context-menu @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-hover-card @radix-ui/react-label @radix-ui/react-menubar @radix-ui/react-navigation-menu @radix-ui/react-popover @radix-ui/react-progress @radix-ui/react-radio-group @radix-ui/react-scroll-area @radix-ui/react-select @radix-ui/react-separator @radix-ui/react-slider @radix-ui/react-switch @radix-ui/react-tabs @radix-ui/react-toggle @radix-ui/react-toggle-group @radix-ui/react-tooltip @radix-ui/react-slot lucide-react sonner@2.0.3 class-variance-authority clsx tailwind-merge cmdk vaul embla-carousel-react react-day-picker date-fns recharts input-otp react-resizable-panels
+```
+
+### Using yarn:
+```bash
+yarn add react react-dom @radix-ui/react-accordion @radix-ui/react-alert-dialog @radix-ui/react-aspect-ratio @radix-ui/react-avatar @radix-ui/react-checkbox @radix-ui/react-collapsible @radix-ui/react-context-menu @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-hover-card @radix-ui/react-label @radix-ui/react-menubar @radix-ui/react-navigation-menu @radix-ui/react-popover @radix-ui/react-progress @radix-ui/react-radio-group @radix-ui/react-scroll-area @radix-ui/react-select @radix-ui/react-separator @radix-ui/react-slider @radix-ui/react-switch @radix-ui/react-tabs @radix-ui/react-toggle @radix-ui/react-toggle-group @radix-ui/react-tooltip @radix-ui/react-slot lucide-react sonner@2.0.3 class-variance-authority clsx tailwind-merge cmdk vaul embla-carousel-react react-day-picker date-fns recharts input-otp react-resizable-panels
+```
+
+### Using pnpm:
+```bash
+pnpm add react react-dom @radix-ui/react-accordion @radix-ui/react-alert-dialog @radix-ui/react-aspect-ratio @radix-ui/react-avatar @radix-ui/react-checkbox @radix-ui/react-collapsible @radix-ui/react-context-menu @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-hover-card @radix-ui/react-label @radix-ui/react-menubar @radix-ui/react-navigation-menu @radix-ui/react-popover @radix-ui/react-progress @radix-ui/react-radio-group @radix-ui/react-scroll-area @radix-ui/react-select @radix-ui/react-separator @radix-ui/react-slider @radix-ui/react-switch @radix-ui/react-tabs @radix-ui/react-toggle @radix-ui/react-toggle-group @radix-ui/react-tooltip @radix-ui/react-slot lucide-react sonner@2.0.3 class-variance-authority clsx tailwind-merge cmdk vaul embla-carousel-react react-day-picker date-fns recharts input-otp react-resizable-panels
+```
+
+### Dev Dependencies:
+```bash
+npm install -D tailwindcss autoprefixer postcss @types/react @types/react-dom typescript
+```
+
+---
+
+## Notes:
+- This app uses shadcn/ui components which are built on top of Radix UI primitives
+- Tailwind CSS v4.0 is used for styling (no tailwind.config.js needed)
+- Sonner is pinned to version 2.0.3 for toast functionality
+- All other packages can use their latest versions
