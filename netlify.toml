@@ -3,20 +3,20 @@
 [build]
   command = "node netlify.build.js"
   publish = "dist"
-  environment = { NODE_VERSION = "22", NODE_ENV = "production" }
+  environment = { NODE_VERSION = "22", NODE_ENV = "production", NPM_CONFIG_PRODUCTION = "false" }
   ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':!*.md' ':!docs' ':!test' || exit 1"
 
 [context.production]
   command = "node netlify.build.js"
-  environment = { NODE_VERSION = "22", NODE_ENV = "production" }
+  environment = { NODE_VERSION = "22", NODE_ENV = "production", NPM_CONFIG_PRODUCTION = "false" }
 
 [context.deploy-preview]
   command = "node netlify.build.js"
-  environment = { NODE_VERSION = "22", NODE_ENV = "production" }
+  environment = { NODE_VERSION = "22", NODE_ENV = "production", NPM_CONFIG_PRODUCTION = "false" }
 
 [context.branch-deploy]
   command = "node netlify.build.js"
-  environment = { NODE_VERSION = "22", NODE_ENV = "production" }
+  environment = { NODE_VERSION = "22", NODE_ENV = "production", NPM_CONFIG_PRODUCTION = "false" }
 
 # Redirect for SPA (Single Page Application)
 [[redirects]]

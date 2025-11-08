@@ -13,12 +13,17 @@ console.log('🔨 Starting Netlify build process...');
 
 try {
   // Clean install to ensure all dependencies are fresh
-  console.log('📦 Installing dependencies with npm ci...');
-  execSync('npm ci --legacy-peer-deps', { stdio: 'inherit' });
+  // Force devDependencies to be installed even in production
+  console.log('📦 Installing dependencies with npm ci --include=dev...');
+  execSync('npm ci --include=dev --legacy-peer-deps', { stdio: 'inherit' });
 
   // Verify vite is installed
   const vitePath = path.join(process.cwd(), 'node_modules', '.bin', 'vite');
   if (!fs.existsSync(vitePath)) {
+    console.log('Searching for vite in node_modules...');
+    const nodeModulesPath = path.join(process.cwd(), 'node_modules');
+    const files = fs.readdirSync(nodeModulesPath);
+    console.log('Found files in node_modules:', files.slice(0, 10));
     throw new Error('❌ Vite not found after npm ci. Build environment is incomplete.');
   }
   console.log('✅ Vite verified');
