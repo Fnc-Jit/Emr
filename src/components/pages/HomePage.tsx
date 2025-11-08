@@ -21,7 +21,8 @@ import {
   Check,
   ArrowRight,
   ArrowLeft,
-  MessageCircle
+  MessageCircle,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
@@ -202,6 +203,7 @@ interface ReportData {
   locationCoords?: { lat: number; lng: number }; // GPS coordinates for map
   dependents: number;
   timestamp: string;
+  priority?: "high" | "medium" | "low"; // Report priority
 }
 
 export function HomePage() {
@@ -248,12 +250,11 @@ export function HomePage() {
   const [hoursVolunteered, setHoursVolunteered] = useState(0);
 
   // Load reports from Supabase for volunteers
-  useEffect(() => {
-    const loadReports = async () => {
-      if (userMode !== "volunteer") return;
+  const loadReports = async () => {
+    if (userMode !== "volunteer") return;
 
-      setReportsLoading(true);
-      try {
+    setReportsLoading(true);
+    try {
         // Check if user is authenticated
         const userId = localStorage.getItem("userId");
         if (!userId) {
@@ -344,6 +345,7 @@ export function HomePage() {
           locationCoords: report.location_coords || undefined, // Store coordinates for map button
           dependents: report.number_of_dependents || 0,
           timestamp: report.created_at,
+          priority: report.priority || "medium", // Include priority from database
         }));
 
         // Filter out already reviewed reports from localStorage
@@ -351,8 +353,22 @@ export function HomePage() {
         const reviewedIds = new Set(reviewedReports.map((r: any) => r.id));
         const filteredReports = transformedReports.filter(r => !reviewedIds.has(r.id));
 
-        console.log(`Loaded ${filteredReports.length} reports from Supabase (${activeReports.length} active, ${transformedReports.length - filteredReports.length} already reviewed)`);
-        setMockReports(filteredReports);
+        // Sort reports: urgent (high priority) first, then by time (most recent first)
+        const sortedReports = filteredReports.sort((a, b) => {
+          // First, sort by priority: high priority (urgent) always on top
+          const priorityOrder = { high: 0, medium: 1, low: 2 };
+          const priorityDiff = (priorityOrder[a.priority || "medium"] || 1) - (priorityOrder[b.priority || "medium"] || 1);
+          
+          if (priorityDiff !== 0) {
+            return priorityDiff;
+          }
+          
+          // If same priority, sort by time (most recent first)
+          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+        });
+
+        console.log(`Loaded ${sortedReports.length} reports from Supabase (${activeReports.length} active, ${transformedReports.length - filteredReports.length} already reviewed)`);
+        setMockReports(sortedReports);
         
         // Update volunteer stats
         // Count verified reports from localStorage
@@ -362,17 +378,25 @@ export function HomePage() {
         // Calculate hours volunteered (estimate: 0.5 hours per verified report)
         const estimatedHours = Math.round(verifiedCount * 0.5);
         setHoursVolunteered(estimatedHours);
-      } catch (error: any) {
-        console.error("Error loading reports:", error);
-        toast.error(`Failed to load reports: ${error.message || "Unknown error"}`);
-        setMockReports([]);
-      } finally {
-        setReportsLoading(false);
-      }
-    };
+    } catch (error: any) {
+      console.error("Error loading reports:", error);
+      toast.error(`Failed to load reports: ${error.message || "Unknown error"}`);
+      setMockReports([]);
+    } finally {
+      setReportsLoading(false);
+    }
+  };
 
+  // Load reports on mount and when userMode changes
+  useEffect(() => {
     loadReports();
   }, [userMode]);
+
+  // Refresh handler
+  const handleRefresh = async () => {
+    await loadReports();
+    toast.success("Reports refreshed successfully");
+  };
 
   const needs = [
     { type: "water" as NeedType, label: t.needWater, icon: Droplets, color: "blue", gradient: "from-blue-500 to-cyan-600" },
@@ -925,7 +949,19 @@ export function HomePage() {
 
               {/* Reports to Verify */}
               <div className="space-y-3">
-                <h3 className="text-gray-900 dark:text-gray-100">{t.reportsToVerify}</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-gray-900 dark:text-gray-100">{t.reportsToVerify}</h3>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRefresh}
+                    disabled={reportsLoading}
+                    className="h-8 px-3"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${reportsLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                </div>
                 
                 {mockReports.map((report, index) => {
                   const needType = needs.find(n => n.type === report.needType);
@@ -963,7 +999,7 @@ export function HomePage() {
                               <div className={`p-1.5 rounded-lg bg-gradient-to-br ${needType?.gradient}`}>
                                 <NeedIcon className="h-4 w-4 text-white" />
                               </div>
-                              {index === 0 && (
+                              {report.priority === "high" && (
                                 <Badge variant="destructive" className="text-xs animate-pulse">
                                   {t.needsUrgentAttention}
                                 </Badge>
