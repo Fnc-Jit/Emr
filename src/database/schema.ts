@@ -1,8 +1,8 @@
 /**
- * Emergency Response App - Database Schema
+ * Res Q - Database Schema
  * 
  * This file defines all database tables, relationships, and schema settings
- * for the Emergency Response Citizen & Volunteer App.
+ * for the Res Q Emergency Response Citizen & Volunteer App.
  * 
  * Database: PostgreSQL (via Supabase)
  * ORM: Supabase Client
@@ -487,7 +487,7 @@ export const sampleData = `
 INSERT INTO users (email, full_name, user_type, is_verified, preferred_language) VALUES
   ('user@example.com', 'John Doe', 'citizen', true, 'en'),
   ('volunteer@example.com', 'Jane Smith', 'volunteer', true, 'en'),
-  ('responder@example.com', 'Emergency Response Team', 'responder', true, 'en');
+  ('responder@example.com', 'Res Q Response Team', 'responder', true, 'en');
 
 -- Insert sample volunteer
 INSERT INTO volunteers (user_id, volunteer_id, verification_status, total_verifications, reputation_score)

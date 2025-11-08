@@ -1,4 +1,4 @@
-# Emergency Response App (EMR)
+# Res Q
 
 A real-time emergency reporting and response system built with React, TypeScript, and Supabase.
 
@@ -117,4 +117,4 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ---
 
-Built with ❤️ for Emergency Response Management
+Built with ❤️ for Res Q - Emergency Response Management

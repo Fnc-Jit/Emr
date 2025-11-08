@@ -242,6 +242,10 @@ export function HomePage() {
   // Reports data for volunteer dashboard - fetched from Supabase
   const [mockReports, setMockReports] = useState<ReportData[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
+  
+  // Volunteer stats
+  const [reportsVerified, setReportsVerified] = useState(0);
+  const [hoursVolunteered, setHoursVolunteered] = useState(0);
 
   // Load reports from Supabase for volunteers
   useEffect(() => {
@@ -349,6 +353,15 @@ export function HomePage() {
 
         console.log(`Loaded ${filteredReports.length} reports from Supabase (${activeReports.length} active, ${transformedReports.length - filteredReports.length} already reviewed)`);
         setMockReports(filteredReports);
+        
+        // Update volunteer stats
+        // Count verified reports from localStorage
+        const verifiedCount = reviewedReports.filter((r: any) => r.verificationAction === "verified").length;
+        setReportsVerified(verifiedCount);
+        
+        // Calculate hours volunteered (estimate: 0.5 hours per verified report)
+        const estimatedHours = Math.round(verifiedCount * 0.5);
+        setHoursVolunteered(estimatedHours);
       } catch (error: any) {
         console.error("Error loading reports:", error);
         toast.error(`Failed to load reports: ${error.message || "Unknown error"}`);
@@ -467,10 +480,17 @@ export function HomePage() {
 
       // Save to localStorage
       const existingReviewed = JSON.parse(localStorage.getItem("reviewedReports") || "[]");
-      localStorage.setItem("reviewedReports", JSON.stringify([...existingReviewed, reviewedReport]));
+      const updatedReviewed = [...existingReviewed, reviewedReport];
+      localStorage.setItem("reviewedReports", JSON.stringify(updatedReviewed));
 
       // Remove from pending reports
       setMockReports(prev => prev.filter(r => r.id !== selectedReport.id));
+      
+      // Update volunteer stats
+      const verifiedCount = updatedReviewed.filter((r: any) => r.verificationAction === "verified").length;
+      setReportsVerified(verifiedCount);
+      const estimatedHours = Math.round(verifiedCount * 0.5);
+      setHoursVolunteered(estimatedHours);
 
       // Trigger custom event to notify ReportsReviewedPage (same tab)
       window.dispatchEvent(new CustomEvent("reviewedReportsUpdated"));
@@ -866,7 +886,7 @@ export function HomePage() {
                     <CheckCircle className="h-5 w-5 text-green-600" />
                     <p className="text-xs text-gray-600 dark:text-gray-400">{t.reportsVerified}</p>
                   </div>
-                  <p className="text-2xl text-green-700 dark:text-green-400">47</p>
+                  <p className="text-2xl text-green-700 dark:text-green-400">{reportsVerified}</p>
                 </motion.div>
                 
                 <motion.div
@@ -888,7 +908,7 @@ export function HomePage() {
                     <TrendingUp className="h-5 w-5 text-orange-600" />
                     <p className="text-xs text-gray-600 dark:text-gray-400">{t.hoursVolunteered}</p>
                   </div>
-                  <p className="text-2xl text-orange-700 dark:text-orange-400">28</p>
+                  <p className="text-2xl text-orange-700 dark:text-orange-400">{hoursVolunteered}</p>
                 </motion.div>
                 
                 <motion.div

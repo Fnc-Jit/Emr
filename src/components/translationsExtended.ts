@@ -7,7 +7,7 @@ const aiFields = {
   aiPlaceholder: "Type your question here...",
   sendMessage: "Send Message",
   aiTyping: "AI is typing...",
-  aiWelcomeMessage: "Hello! I'm your AI-powered emergency response assistant. How can I help you today?",
+  aiWelcomeMessage: "Hello! I'm your AI-powered Res Q assistant. How can I help you today?",
   aiHelpSuggestion1: "How do I report an emergency?",
   aiHelpSuggestion2: "What information should I include?",
   aiHelpSuggestion3: "How do I verify a report?",

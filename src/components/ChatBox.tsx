@@ -134,7 +134,7 @@ export function ChatBox({ inline = false, compact = false, onInputChange, isExpa
     const messagesForAPI = [
       {
         role: "system",
-        content: `You are a helpful AI assistant for an emergency response application. Your role is to help users:
+        content: `You are a helpful AI assistant for Res Q, an emergency response application. Your role is to help users:
 - Report emergencies quickly and effectively
 - Understand how to use the app features
 - Navigate privacy and location settings
@@ -162,7 +162,7 @@ Be concise, friendly, and focused on emergency response assistance. Always prior
           "Authorization": `Bearer ${API_KEY}`,
           "Content-Type": "application/json",
           "HTTP-Referer": window.location.origin,
-          "X-Title": "Emergency Response App"
+          "X-Title": "Res Q - Emergency Response App"
         },
         body: JSON.stringify({
           model: "openai/gpt-3.5-turbo", // Using GPT-3.5-turbo via OpenRouter
