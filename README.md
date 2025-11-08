@@ -120,8 +120,5 @@ Get your OpenRouter API key from: https://openrouter.ai/keys
 
 ---
 
-<<<<<<< HEAD
 Built with ❤️ for Res Q - Emergency Response Management
-=======
-Built with ❤️ by Res Q
->>>>>>> a2f8962 (comit)
+  

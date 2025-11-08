@@ -378,6 +378,10 @@ export function HomePage() {
         // Calculate hours volunteered (estimate: 0.5 hours per verified report)
         const estimatedHours = Math.round(verifiedCount * 0.5);
         setHoursVolunteered(estimatedHours);
+        
+        // Calculate hours volunteered (estimate: 0.5 hours per verified report)
+        const estimatedHours = Math.round(verifiedCount * 0.5);
+        setHoursVolunteered(estimatedHours);
     } catch (error: any) {
       console.error("Error loading reports:", error);
       toast.error(`Failed to load reports: ${error.message || "Unknown error"}`);
