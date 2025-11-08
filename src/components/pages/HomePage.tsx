@@ -45,6 +45,7 @@ import {
 import { toast } from "sonner@2.0.3";
 import { useLanguage } from "../LanguageProvider";
 import { motion, AnimatePresence } from "motion/react";
+import { ChatBox } from "../ChatBox";
 
 type NeedType = "water" | "medical" | "shelter" | "food" | "other" | null;
 
@@ -1057,9 +1058,9 @@ export function HomePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* AI ChatBox - Only for Citizens */}
+      {userMode === "user" && <ChatBox />}
     </div>
   );
 }
-
-// Add ArrowRight import to the existing imports
-import { ArrowRight } from "lucide-react";
