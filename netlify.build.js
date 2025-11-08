@@ -17,26 +17,30 @@ try {
   console.log('📦 Installing dependencies with npm ci --include=dev...');
   execSync('npm ci --include=dev --legacy-peer-deps', { stdio: 'inherit' });
 
-  // Fix for missing @rollup/rollup-linux-x64-gnu on Netlify
-  // This is a known npm issue with optional dependencies
-  console.log('🔧 Installing rollup native bindings for Linux...');
-  try {
-    execSync('npm install --no-save @rollup/rollup-linux-x64-gnu', { stdio: 'pipe' });
-  } catch (e) {
-    // Continue even if this fails - it's optional
-    console.log('⚠️  Warning: Could not install rollup native bindings, will try without');
+  // Fix for missing native bindings on Netlify (Linux)
+  // Netlify uses Linux but npm sometimes doesn't install native bindings for Linux
+  console.log('🔧 Installing native bindings for Linux...');
+  const nativePackages = [
+    '@rollup/rollup-linux-x64-gnu',
+    '@swc/core-linux-x64-gnu',
+  ];
+  
+  for (const pkg of nativePackages) {
+    try {
+      console.log(`  Installing ${pkg}...`);
+      execSync(`npm install --no-save ${pkg}`, { stdio: 'pipe' });
+    } catch (e) {
+      // Continue even if installation fails - these are optional
+      console.log(`  ⚠️  Could not install ${pkg}, continuing...`);
+    }
   }
 
   // Verify vite is installed
   const vitePath = path.join(process.cwd(), 'node_modules', '.bin', 'vite');
   if (!fs.existsSync(vitePath)) {
-    console.log('Searching for vite in node_modules...');
-    const nodeModulesPath = path.join(process.cwd(), 'node_modules');
-    const files = fs.readdirSync(nodeModulesPath);
-    console.log('Found files in node_modules:', files.slice(0, 10));
     throw new Error('❌ Vite not found after npm ci. Build environment is incomplete.');
   }
-  console.log('✅ Vite verified');
+  console.log('✅ Build dependencies verified');
 
   // Run the build
   console.log('🏗️  Running vite build...');
