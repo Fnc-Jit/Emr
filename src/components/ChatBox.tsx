@@ -53,18 +53,40 @@ export function ChatBox({ inline = false, compact = false, onInputChange, isExpa
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
+  // Get time-sensitive greeting
+  const getTimeSensitiveGreeting = useCallback(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    
+    // More granular time-based greetings
+    if (hour >= 5 && hour < 12) {
+      if (hour < 7) {
+        return "Good early morning! ";
+      } else if (hour < 10) {
+        return "Good morning! ";
+      } else {
+        return "Good late morning! ";
+      }
+    } else if (hour >= 12 && hour < 18) {
+      if (hour < 14) {
+        return "Good afternoon! ";
+      } else {
+        return "Good late afternoon! ";
+      }
+    } else if (hour >= 18 && hour < 22) {
+      return "Good evening! ";
+    } else if (hour >= 22 || hour < 2) {
+      return "Good night! ";
+    } else {
+      return "Good early morning! ";
+    }
+  }, []);
+
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      // Send welcome message when chat is first opened
-      const greetingTime = new Date().getHours();
-      let greeting = "";
-      if (greetingTime < 12) {
-        greeting = "Good morning! ";
-      } else if (greetingTime < 18) {
-        greeting = "Good afternoon! ";
-      } else {
-        greeting = "Good evening! ";
-      }
+      // Send welcome message when chat is first opened with time-sensitive greeting
+      const greeting = getTimeSensitiveGreeting();
       
       const welcomeMessage: Message = {
         id: `ai-${Date.now()}`,
@@ -74,7 +96,7 @@ export function ChatBox({ inline = false, compact = false, onInputChange, isExpa
       };
       setMessages([welcomeMessage]);
     }
-  }, [isOpen, messages.length, t.aiWelcomeMessage]);
+  }, [isOpen, messages.length, t.aiWelcomeMessage, getTimeSensitiveGreeting]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
