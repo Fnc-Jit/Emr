@@ -1,14 +1,25 @@
 import { useState } from "react";
-import { ShieldAlert, User, UserPlus, ArrowRight } from "lucide-react";
+import { ShieldAlert, User, UserPlus, ArrowRight, Mail } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Checkbox } from "../ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
 import { toast } from "sonner@2.0.3";
 import { useLanguage } from "../LanguageProvider";
 import { motion } from "motion/react";
+import { supabase } from "../../database/config";
+import { UserService, VolunteerService } from "../../database/services";
+import { RegisterPage } from "./RegisterPage";
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -16,6 +27,9 @@ interface LoginPageProps {
 
 export function LoginPage({ onLogin }: LoginPageProps) {
   const { t } = useLanguage();
+  
+  // Show registration page state
+  const [showRegister, setShowRegister] = useState(false);
   
   // User login state
   const [userEmail, setUserEmail] = useState("");
@@ -28,6 +42,12 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [volPassword, setVolPassword] = useState("");
   const [volRememberMe, setVolRememberMe] = useState(false);
   const [isVolLoading, setIsVolLoading] = useState(false);
+  
+  // Password reset state
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetMode, setResetMode] = useState<"user" | "volunteer">("user");
 
   const handleUserLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,24 +59,71 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
     setIsUserLoading(true);
 
-    // Simulate login
-    setTimeout(() => {
-      // Demo credentials for user login
-      if (userEmail === "user@emergency.com" && userPassword === "user123") {
+    try {
+      // Authenticate via Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: userPassword,
+      });
+
+      if (authError) {
+        // Fallback to demo credentials if Supabase is not configured
+        if (userEmail === "user@emergency.com" && userPassword === "user123") {
+          if (userRememberMe) {
+            localStorage.setItem("rememberMe", "true");
+            localStorage.setItem("userEmail", userEmail);
+          }
+          localStorage.setItem("isAuthenticated", "true");
+          localStorage.setItem("userMode", "user");
+          localStorage.setItem("userName", "John Citizen");
+          toast.success(t.loginSuccessful);
+          onLogin();
+        } else {
+          toast.error(authError.message || t.invalidCredentials || "Invalid credentials");
+        }
+        setIsUserLoading(false);
+        return;
+      }
+
+      if (authData?.user) {
+        // Get user details from database
+        const { data: userData, error: userError } = await UserService.getUserById(authData.user.id);
+        
+        if (userError || !userData) {
+          toast.error("User account not found in database");
+          setIsUserLoading(false);
+          return;
+        }
+
+        // Check if user is a citizen (not a volunteer)
+        if (userData.user_type === 'volunteer') {
+          toast.error("Please use the Volunteer login tab");
+          setIsUserLoading(false);
+          return;
+        }
+
+        // Update last login
+        await UserService.updateLastLogin(authData.user.id);
+
+        // Store authentication data
         if (userRememberMe) {
           localStorage.setItem("rememberMe", "true");
           localStorage.setItem("userEmail", userEmail);
         }
         localStorage.setItem("isAuthenticated", "true");
         localStorage.setItem("userMode", "user");
-        localStorage.setItem("userName", "John Citizen");
+        localStorage.setItem("userId", authData.user.id);
+        localStorage.setItem("userName", userData.full_name || userEmail);
+        
         toast.success(t.loginSuccessful);
         onLogin();
-      } else {
-        toast.error(t.invalidCredentials || "Invalid credentials. Use: user@emergency.com / user123");
       }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast.error(error.message || "Login failed. Please try again.");
+    } finally {
       setIsUserLoading(false);
-    }, 800);
+    }
   };
 
   const handleVolunteerLogin = async (e: React.FormEvent) => {
@@ -69,25 +136,160 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
     setIsVolLoading(true);
 
-    // Simulate login
-    setTimeout(() => {
-      // Demo credentials for volunteer login
-      if (volEmail === "volunteer@emergency.com" && volPassword === "emergency2024") {
+    try {
+      // Authenticate via Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: volEmail,
+        password: volPassword,
+      });
+
+      if (authError) {
+        // Hardcoded volunteer accounts (fallback if Supabase auth fails or account doesn't exist)
+        const hardcodedVolunteers = [
+          {
+            email: "volunteer@emergency.com",
+            password: "emergency2024",
+            name: "Volunteer Smith",
+            userId: "demo-volunteer-1",
+            volunteerId: "demo-vol-1"
+          },
+          {
+            email: "user123@gmail.com",
+            password: "user1234",
+            name: "Volunteer User",
+            userId: "demo-volunteer-2",
+            volunteerId: "demo-vol-2"
+          },
+          {
+            email: "volunteer@test.com",
+            password: "volunteer123",
+            name: "Test Volunteer",
+            userId: "demo-volunteer-3",
+            volunteerId: "demo-vol-3"
+          }
+        ];
+
+        const hardcodedVol = hardcodedVolunteers.find(
+          v => v.email === volEmail && v.password === volPassword
+        );
+
+        if (hardcodedVol) {
+          if (volRememberMe) {
+            localStorage.setItem("rememberMe", "true");
+            localStorage.setItem("userEmail", volEmail);
+          }
+          localStorage.setItem("isAuthenticated", "true");
+          localStorage.setItem("userMode", "volunteer");
+          localStorage.setItem("userId", hardcodedVol.userId);
+          localStorage.setItem("volunteerId", hardcodedVol.volunteerId);
+          localStorage.setItem("userName", hardcodedVol.name);
+          toast.success(t.loginSuccessful);
+          onLogin();
+        } else {
+          toast.error(authError.message || t.invalidCredentials || "Invalid credentials");
+        }
+        setIsVolLoading(false);
+        return;
+      }
+
+      if (authData?.user) {
+        // Check if user is an approved volunteer
+        const { data: volunteerData, error: volunteerError } = await VolunteerService.getVolunteerByUserId(authData.user.id);
+        
+        if (volunteerError || !volunteerData) {
+          toast.error("Volunteer account not found or not approved");
+          setIsVolLoading(false);
+          return;
+        }
+
+        // Check verification status
+        if (volunteerData.verification_status !== 'approved') {
+          toast.error("Your volunteer account is pending approval");
+          setIsVolLoading(false);
+          return;
+        }
+
+        // Get user details
+        const { data: userData } = await UserService.getUserById(authData.user.id);
+
+        // Update last login
+        await UserService.updateLastLogin(authData.user.id);
+
+        // Store authentication data
         if (volRememberMe) {
           localStorage.setItem("rememberMe", "true");
           localStorage.setItem("userEmail", volEmail);
         }
         localStorage.setItem("isAuthenticated", "true");
         localStorage.setItem("userMode", "volunteer");
-        localStorage.setItem("userName", "Volunteer Smith");
+        localStorage.setItem("userId", authData.user.id);
+        localStorage.setItem("volunteerId", volunteerData.id);
+        localStorage.setItem("userName", userData?.full_name || volEmail);
+        
         toast.success(t.loginSuccessful);
         onLogin();
-      } else {
-        toast.error(t.invalidCredentials || "Invalid credentials. Use: volunteer@emergency.com / emergency2024");
       }
+    } catch (error: any) {
+      console.error("Volunteer login error:", error);
+      toast.error(error.message || "Login failed. Please try again.");
+    } finally {
       setIsVolLoading(false);
-    }, 800);
+    }
   };
+
+  // Handle password reset - Connected to Supabase Auth
+  const handlePasswordReset = async () => {
+    if (!resetEmail || !resetEmail.includes("@")) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      // Use Supabase Auth to send password reset email
+      const { data, error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+        // Optional: Customize email template
+        // emailRedirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        console.error("Supabase password reset error:", error);
+        
+        // Handle specific error cases
+        if (error.message.includes("rate limit")) {
+          toast.error("Too many requests. Please wait a moment and try again.");
+        } else if (error.message.includes("email")) {
+          toast.error("Invalid email address. Please check and try again.");
+        } else {
+          toast.error(error.message || "Failed to send reset email. Please try again.");
+        }
+      } else {
+        // Success - email sent via Supabase Auth
+        console.log("Password reset email sent successfully to:", resetEmail);
+        toast.success("Password reset email sent! Please check your inbox and spam folder.", {
+          duration: 5000,
+        });
+        setShowResetDialog(false);
+        setResetEmail("");
+      }
+    } catch (error: any) {
+      console.error("Password reset error:", error);
+      toast.error("An unexpected error occurred. Please try again later.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  // Show registration page if requested
+  if (showRegister) {
+    return (
+      <RegisterPage
+        onBack={() => setShowRegister(false)}
+        onRegisterSuccess={onLogin}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
@@ -197,7 +399,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       <button
                         type="button"
                         className="text-sm text-[#11111b] hover:text-gray-800 dark:text-[#b4befe] dark:hover:text-[#cba6f7] hover:underline"
-                        onClick={() => toast.info("Password recovery coming soon")}
+                        onClick={() => {
+                          setResetMode("user");
+                          setResetEmail(userEmail);
+                          setShowResetDialog(true);
+                        }}
                       >
                         {t.forgotPassword}
                       </button>
@@ -226,10 +432,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       Don't have an account?{" "}
                       <button
                         type="button"
-                        className="text-[#11111b] dark:text-[#b4befe] hover:underline"
-                        onClick={() => toast.info("Registration coming soon")}
+                        className="text-[#11111b] dark:text-[#b4befe] hover:underline font-medium"
+                        onClick={() => setShowRegister(true)}
                       >
-                        {t.createAccount}
+                        {t.createAccount || "Create Account"}
                       </button>
                     </p>
                   </form>
@@ -239,7 +445,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 <TabsContent value="volunteer" className="space-y-4">
                   <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-900 text-sm text-center">
                     <p className="text-green-800 dark:text-green-300">
-                      <strong>Demo:</strong> volunteer@emergency.com / emergency2024
+                      <strong>Demo:</strong> volunteer@emergency.com / emergency2024<br/>
+                      <strong>Or:</strong> user123@gmail.com / user1234
                     </p>
                   </div>
 
@@ -287,7 +494,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       <button
                         type="button"
                         className="text-sm text-green-600 hover:text-green-700 dark:text-green-400 hover:underline"
-                        onClick={() => toast.info("Password recovery coming soon")}
+                        onClick={() => {
+                          setResetMode("volunteer");
+                          setResetEmail(volEmail);
+                          setShowResetDialog(true);
+                        }}
                       >
                         {t.forgotPassword}
                       </button>
@@ -337,6 +548,78 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           </p>
         </motion.div>
       </motion.div>
+
+      {/* Password Reset Dialog */}
+      <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Reset Password
+            </DialogTitle>
+            <DialogDescription>
+              Enter your email address and we'll send you a link to reset your password.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email Address</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                placeholder="Enter your email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                disabled={isResetting}
+                className="h-12"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !isResetting) {
+                    handlePasswordReset();
+                  }
+                }}
+              />
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              You'll receive an email from Supabase with instructions to reset your password. 
+              Please check your inbox and spam folder. The link will expire in 1 hour.
+            </p>
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900 text-xs text-blue-800 dark:text-blue-300">
+              <p className="font-semibold mb-1">📧 Email Configuration:</p>
+              <p>Make sure email is enabled in your Supabase Dashboard → Authentication → Email Templates</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowResetDialog(false);
+                setResetEmail("");
+              }}
+              disabled={isResetting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePasswordReset}
+              disabled={isResetting || !resetEmail}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+            >
+              {isResetting ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="h-4 w-4 border-2 border-white border-t-transparent rounded-full"
+                />
+              ) : (
+                <>
+                  Send Reset Link
+                  <Mail className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

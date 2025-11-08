@@ -4,7 +4,9 @@
   import path from 'path';
 
   export default defineConfig({
-    plugins: [react()],
+    plugins: [
+      react(), // Fast Refresh is enabled by default
+    ],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
@@ -55,6 +57,19 @@
     },
     server: {
       port: 3000,
+      host: true, // Allow access from network
       open: true,
+      hmr: {
+        overlay: true, // Show errors in browser overlay
+      },
+      watch: {
+        // Watch for file changes
+        usePolling: false, // Use native file system events (faster)
+        interval: 100, // Polling interval (if polling enabled)
+      },
+    },
+    // Optimize HMR performance
+    optimizeDeps: {
+      include: ['react', 'react-dom'],
     },
   });

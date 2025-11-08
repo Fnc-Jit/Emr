@@ -18,7 +18,10 @@ import {
   X,
   Upload,
   Zap,
-  Check
+  Check,
+  ArrowRight,
+  ArrowLeft,
+  MessageCircle
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
@@ -46,6 +49,139 @@ import { toast } from "sonner@2.0.3";
 import { useLanguage } from "../LanguageProvider";
 import { motion, AnimatePresence } from "motion/react";
 import { ChatBox } from "../ChatBox";
+import { ReportService, VolunteerService } from "../../database/services";
+import { supabase } from "../../database/config";
+
+// Improved AI Chat Component with Enhanced UI
+function AIChatDropdown() {
+  const { t } = useLanguage();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [inputValue, setInputValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleInputChange = (e: { target: { value: string } }) => {
+    const value = e.target.value;
+    setInputValue(value);
+    if (value.trim().length > 0 && !isExpanded) {
+      setIsExpanded(true);
+    }
+  };
+
+  const handleClose = () => {
+    setIsExpanded(false);
+    setInputValue("");
+  };
+
+  // Handle Escape key to close chatbot
+  useEffect(() => {
+    if (!isExpanded) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsExpanded(false);
+        setInputValue("");
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isExpanded]);
+
+  return (
+    <>
+      {/* Enhanced Input Bar - Always visible when not expanded */}
+      {!isExpanded && (
+        <div className="flex justify-center w-full p-4">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0, y: 10 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="w-full max-w-2xl"
+          >
+            <div className="relative group">
+              {/* Gradient background with blur effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 via-indigo-500/20 to-pink-500/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              
+              {/* Main input container */}
+              <div className="relative flex items-center gap-3 p-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-full border-2 border-purple-200/50 dark:border-purple-800/50 shadow-lg hover:shadow-xl hover:border-purple-300 dark:hover:border-purple-700 transition-all duration-300">
+                {/* Icon */}
+                <div className="flex-shrink-0 p-2 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-md">
+                  <MessageCircle className="h-5 w-5" />
+                </div>
+                
+                {/* Input field */}
+                <Input
+                  ref={inputRef}
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  placeholder={t.askAIForHelp || "Ask anything..."}
+                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                />
+                
+                {/* Animated gradient indicator */}
+                {inputValue.length > 0 && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="w-2 h-2 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600"
+                  />
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Enhanced Half Screen Chat - Expands when input is entered */}
+      <AnimatePresence>
+        {isExpanded && (
+          <>
+            {/* Enhanced Backdrop with blur */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleClose}
+              className="fixed inset-0 z-[9998] bg-black/30 dark:bg-black/50 backdrop-blur-sm"
+            />
+            
+            {/* Enhanced Half Screen Chat Panel */}
+            <motion.div
+              initial={{ opacity: 0, y: "100%" }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: "100%" }}
+              transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+              className="fixed bottom-0 left-0 right-0 z-[9999] bg-gradient-to-b from-white via-white to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 rounded-t-3xl shadow-2xl border-t-2 border-purple-200/50 dark:border-purple-800/50"
+              style={{ height: '55vh', maxHeight: '650px' }}
+            >
+              {/* Decorative gradient overlay */}
+              <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-purple-500/10 via-indigo-500/10 to-pink-500/10 rounded-t-3xl pointer-events-none" />
+              
+              {/* Handle bar indicator */}
+              <div className="absolute top-3 left-1/2 transform -translate-x-1/2 w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full" />
+              
+              {/* Half Screen Chat Content */}
+              <div className="w-full h-full flex items-start justify-center px-6 py-6 pb-8 overflow-y-auto relative">
+                <div className="w-full max-w-4xl h-full">
+                  <ChatBox 
+                    inline={true} 
+                    compact={false}
+                    initialInput={inputValue}
+                    onClose={handleClose}
+                    isExpanded={true}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
 
 type NeedType = "water" | "medical" | "shelter" | "food" | "other" | null;
 
@@ -62,7 +198,8 @@ interface ReportData {
   caseId: string;
   needType: NeedType;
   description: string;
-  location: string;
+  location: string; // Human-readable location name
+  locationCoords?: { lat: number; lng: number }; // GPS coordinates for map
   dependents: number;
   timestamp: string;
 }
@@ -78,6 +215,7 @@ export function HomePage() {
   const [selectedFlair, setSelectedFlair] = useState<string | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [location, setLocation] = useState("Detecting location...");
+  const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [vulnerableTags, setVulnerableTags] = useState<string[]>([]);
   const [shareWithResponders, setShareWithResponders] = useState(true);
   const [sharePreciseCoords, setSharePreciseCoords] = useState(false);
@@ -101,36 +239,127 @@ export function HomePage() {
     setUserMode(mode);
   }, []);
 
-  // Mock reports data for volunteer dashboard
-  const mockReports: ReportData[] = [
-    {
-      id: "1",
-      caseId: "CASE-2024-046",
-      needType: "medical",
-      description: "Need urgent medical supplies for elderly residents",
-      location: "MG Road Area, Bangalore",
-      dependents: 8,
-      timestamp: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-    },
-    {
-      id: "2",
-      caseId: "CASE-2024-045",
-      needType: "water",
-      description: "Water supply disrupted, community of 50+ families",
-      location: "Koramangala, Bangalore",
-      dependents: 12,
-      timestamp: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-    },
-    {
-      id: "3",
-      caseId: "CASE-2024-041",
-      needType: "shelter",
-      description: "Families displaced due to flooding",
-      location: "Whitefield, Bangalore",
-      dependents: 15,
-      timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-    },
-  ];
+  // Reports data for volunteer dashboard - fetched from Supabase
+  const [mockReports, setMockReports] = useState<ReportData[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+
+  // Load reports from Supabase for volunteers
+  useEffect(() => {
+    const loadReports = async () => {
+      if (userMode !== "volunteer") return;
+
+      setReportsLoading(true);
+      try {
+        // Check if user is authenticated
+        const userId = localStorage.getItem("userId");
+        if (!userId) {
+          console.warn("No userId found - volunteer may not be logged in");
+          setMockReports([]);
+          setReportsLoading(false);
+          return;
+        }
+
+        // Check if this is a hardcoded demo volunteer account
+        const isDemoVolunteer = userId.startsWith('demo-volunteer-');
+        
+        if (isDemoVolunteer) {
+          // For demo accounts, skip Supabase check and load reports directly
+          console.log("Using demo volunteer account");
+          // Ensure volunteerId is set
+          if (!localStorage.getItem("volunteerId")) {
+            localStorage.setItem("volunteerId", localStorage.getItem("userId")?.replace("volunteer", "vol") || "demo-vol-1");
+          }
+        } else {
+          // Verify volunteer status and get volunteerId for real accounts
+          const { data: volunteerData, error: volunteerError } = await VolunteerService.getVolunteerByUserId(userId);
+          if (volunteerError || !volunteerData) {
+            console.error("Volunteer record not found or error:", volunteerError);
+            toast.error("Volunteer account not found. Please contact administrator.", {
+              duration: 5000,
+            });
+            setMockReports([]);
+            setReportsLoading(false);
+            return;
+          }
+
+          if (volunteerData.verification_status !== 'approved') {
+            console.warn("Volunteer account not approved:", volunteerData.verification_status);
+            toast.warning("Your volunteer account is pending approval.", {
+              duration: 5000,
+            });
+            setMockReports([]);
+            setReportsLoading(false);
+            return;
+          }
+
+          // Ensure volunteerId is stored in localStorage
+          if (!localStorage.getItem("volunteerId")) {
+            localStorage.setItem("volunteerId", volunteerData.id);
+          }
+        }
+
+        // Fetch all pending/active reports (not resolved, duplicate, or false)
+        // Remove status filter to show all reports that need verification
+        const { data, error } = await ReportService.getAllReports({
+          // Don't filter by status - show all non-resolved reports
+          limit: 50,
+        });
+
+        if (error) {
+          console.error("Error loading reports from Supabase:", error);
+          console.error("Error details:", JSON.stringify(error, null, 2));
+          
+          // Check if it's an RLS policy error
+          if (error.message?.includes("policy") || error.message?.includes("RLS")) {
+            toast.error("Access denied. Please ensure your volunteer account is approved.", {
+              duration: 5000,
+            });
+          }
+          
+          // Don't fallback to mock data - show empty state instead
+          setMockReports([]);
+          return;
+        }
+
+        // Filter out resolved, duplicate, and false reports
+        const activeReports = (data || []).filter((report: any) => 
+          report.status !== 'resolved' && 
+          report.status !== 'duplicate' && 
+          report.status !== 'false'
+        );
+
+        // Transform Supabase data to ReportData format
+        const transformedReports: ReportData[] = activeReports.map((report: any) => ({
+          id: report.id,
+          caseId: report.case_id,
+          needType: report.need_type,
+          description: report.description,
+          location: report.location_address || 
+                   (report.location_coords ? `${report.location_coords.lat}, ${report.location_coords.lng}` : null) ||
+                   "Unknown",
+          locationCoords: report.location_coords || undefined, // Store coordinates for map button
+          dependents: report.number_of_dependents || 0,
+          timestamp: report.created_at,
+        }));
+
+        // Filter out already reviewed reports from localStorage
+        const reviewedReports = JSON.parse(localStorage.getItem("reviewedReports") || "[]");
+        const reviewedIds = new Set(reviewedReports.map((r: any) => r.id));
+        const filteredReports = transformedReports.filter(r => !reviewedIds.has(r.id));
+
+        console.log(`Loaded ${filteredReports.length} reports from Supabase (${activeReports.length} active, ${transformedReports.length - filteredReports.length} already reviewed)`);
+        setMockReports(filteredReports);
+      } catch (error: any) {
+        console.error("Error loading reports:", error);
+        toast.error(`Failed to load reports: ${error.message || "Unknown error"}`);
+        setMockReports([]);
+      } finally {
+        setReportsLoading(false);
+      }
+    };
+
+    loadReports();
+  }, [userMode]);
 
   const needs = [
     { type: "water" as NeedType, label: t.needWater, icon: Droplets, color: "blue", gradient: "from-blue-500 to-cyan-600" },
@@ -171,24 +400,164 @@ export function HomePage() {
     setVerifyDialogOpen(true);
   };
 
-  const handleSubmitVerification = () => {
+  const handleSubmitVerification = async () => {
     if (!verificationNotes.trim()) {
       toast.error("Please add verification notes");
       return;
     }
 
-    // Simulate verification submission
-    toast.success(t.verificationSuccess);
-    setVerifyDialogOpen(false);
-    setVerificationNotes("");
-    setVerificationPhoto(null);
-    setSelectedReport(null);
+    if (!selectedReport) return;
+
+    // Get volunteerId from localStorage or fetch it
+    let volunteerId = localStorage.getItem("volunteerId");
+    if (!volunteerId) {
+      const userId = localStorage.getItem("userId");
+      if (!userId) {
+        toast.error("Please log in again");
+        return;
+      }
+      
+      // Fetch volunteer record to get volunteerId
+      const { data: volunteerData, error: volunteerError } = await VolunteerService.getVolunteerByUserId(userId);
+      if (volunteerError || !volunteerData) {
+        toast.error("Volunteer account not found. Please contact administrator.");
+        return;
+      }
+      
+      volunteerId = volunteerData.id;
+      // Store it for future use
+      localStorage.setItem("volunteerId", volunteerId);
+    }
+
+    try {
+      // Create verification in Supabase
+      const { data: verificationData, error: verificationError } = await VolunteerService.createVerification({
+        report_id: selectedReport.id,
+        volunteer_id: volunteerId,
+        verification_type: 'witness',
+        verification_status: 'confirmed',
+        notes: verificationNotes,
+        photo_urls: verificationPhoto ? [verificationPhoto] : [],
+      });
+
+      if (verificationError) {
+        console.error("Verification error:", verificationError);
+        toast.error("Failed to submit verification. Saving locally...");
+      }
+
+      // Update report status
+      await ReportService.updateReport(selectedReport.id, {
+        status: 'verified',
+      });
+
+      // Create reviewed report entry for localStorage (for ReportsReviewedPage)
+      const reviewedReport = {
+        id: selectedReport.id,
+        caseId: selectedReport.caseId,
+        needType: selectedReport.needType,
+        description: selectedReport.description,
+        location: selectedReport.location,
+        reportedAt: selectedReport.timestamp,
+        reviewedAt: new Date().toISOString(),
+        verificationAction: "verified" as const,
+        myNotes: verificationNotes,
+        dependents: selectedReport.dependents,
+        resolutionStatus: "in_progress" as const,
+      };
+
+      // Save to localStorage
+      const existingReviewed = JSON.parse(localStorage.getItem("reviewedReports") || "[]");
+      localStorage.setItem("reviewedReports", JSON.stringify([...existingReviewed, reviewedReport]));
+
+      // Remove from pending reports
+      setMockReports(prev => prev.filter(r => r.id !== selectedReport.id));
+
+      // Trigger custom event to notify ReportsReviewedPage (same tab)
+      window.dispatchEvent(new CustomEvent("reviewedReportsUpdated"));
+      // Also trigger storage event for other tabs
+      window.dispatchEvent(new Event("storage"));
+
+      toast.success(t.verificationSuccess);
+      setVerifyDialogOpen(false);
+      setVerificationNotes("");
+      setVerificationPhoto(null);
+      setSelectedReport(null);
+    } catch (error: any) {
+      console.error("Verification error:", error);
+      toast.error(error.message || "Failed to submit verification");
+    }
   };
 
-  const handleRejectReport = (report: ReportData) => {
-    // Simulate report rejection
-    toast.success("Report rejected");
-    // In a real app, this would update the report status in the database
+  const handleRejectReport = async (report: ReportData) => {
+    // Get volunteerId from localStorage or fetch it
+    let volunteerId = localStorage.getItem("volunteerId");
+    if (!volunteerId) {
+      const userId = localStorage.getItem("userId");
+      if (!userId) {
+        toast.error("Please log in again");
+        return;
+      }
+      
+      // Fetch volunteer record to get volunteerId
+      const { data: volunteerData, error: volunteerError } = await VolunteerService.getVolunteerByUserId(userId);
+      if (volunteerError || !volunteerData) {
+        toast.error("Volunteer account not found. Please contact administrator.");
+        return;
+      }
+      
+      volunteerId = volunteerData.id;
+      // Store it for future use
+      localStorage.setItem("volunteerId", volunteerId);
+    }
+
+    try {
+      // Create verification in Supabase with disputed status
+      await VolunteerService.createVerification({
+        report_id: report.id,
+        volunteer_id: volunteerId,
+        verification_type: 'witness',
+        verification_status: 'disputed',
+        notes: "Report rejected by volunteer",
+        photo_urls: [],
+      });
+
+      // Update report status
+      await ReportService.updateReport(report.id, {
+        status: 'false',
+      });
+
+      // Create reviewed report entry for localStorage
+      const reviewedReport = {
+        id: report.id,
+        caseId: report.caseId,
+        needType: report.needType,
+        description: report.description,
+        location: report.location,
+        reportedAt: report.timestamp,
+        reviewedAt: new Date().toISOString(),
+        verificationAction: "flagged" as const,
+        myNotes: "Report rejected by volunteer",
+        dependents: report.dependents,
+        resolutionStatus: "escalated" as const,
+      };
+
+      // Save to localStorage
+      const existingReviewed = JSON.parse(localStorage.getItem("reviewedReports") || "[]");
+      localStorage.setItem("reviewedReports", JSON.stringify([...existingReviewed, reviewedReport]));
+
+      // Remove from pending reports
+      setMockReports(prev => prev.filter(r => r.id !== report.id));
+
+      // Trigger custom event to notify ReportsReviewedPage (same tab)
+      window.dispatchEvent(new CustomEvent("reviewedReportsUpdated"));
+      // Also trigger storage event for other tabs
+      window.dispatchEvent(new Event("storage"));
+
+      toast.success("Report rejected and moved to reviewed");
+    } catch (error: any) {
+      console.error("Reject error:", error);
+      toast.error(error.message || "Failed to flag report");
+    }
   };
 
   const handleVerificationPhotoCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -237,19 +606,87 @@ export function HomePage() {
     }
   };
 
-  const handleGetLocation = () => {
+  // Reverse geocoding function to get location name from coordinates
+  const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'EmergencyResponseApp/1.0' // Required by Nominatim
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Geocoding failed');
+      }
+      
+      const data = await response.json();
+      
+      if (data && data.address) {
+        const addr = data.address;
+        // Build a readable address from the response
+        const addressParts: string[] = [];
+        
+        if (addr.road || addr.street) {
+          addressParts.push(addr.road || addr.street || '');
+        }
+        if (addr.suburb || addr.neighbourhood) {
+          addressParts.push(addr.suburb || addr.neighbourhood || '');
+        }
+        if (addr.city || addr.town || addr.village) {
+          addressParts.push(addr.city || addr.town || addr.village || '');
+        }
+        if (addr.state) {
+          addressParts.push(addr.state);
+        }
+        if (addr.country) {
+          addressParts.push(addr.country);
+        }
+        
+        return addressParts.length > 0 
+          ? addressParts.join(', ') 
+          : data.display_name || `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+      }
+      
+      return data.display_name || `Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+      // Fallback to coordinates if geocoding fails
+      return `Approx: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    }
+  };
+
+  const handleGetLocation = async () => {
     if ("geolocation" in navigator) {
       toast.info("Detecting location...");
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude.toFixed(4);
-          const lng = position.coords.longitude.toFixed(4);
-          setLocation(`Approx: ${lat}, ${lng}`);
-          toast.success("Location captured");
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
+          // Store coordinates
+          setLocationCoords({ lat, lng });
+          
+          // Show coordinates while fetching address
+          setLocation(`Getting address...`);
+          
+          // Fetch location name
+          try {
+            const locationName = await reverseGeocode(lat, lng);
+            setLocation(locationName);
+            toast.success("Location captured");
+          } catch (error) {
+            // Fallback to coordinates if geocoding fails
+            setLocation(`Approx: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+            toast.success("Location captured (coordinates only)");
+          }
         },
         () => {
           toast.error(t.locationPermissionDenied || "Location permission denied");
           setLocation("Location not available");
+          setLocationCoords(null);
         }
       );
     }
@@ -261,7 +698,7 @@ export function HomePage() {
     );
   };
 
-  const handleSubmitReport = () => {
+  const handleSubmitReport = async () => {
     if (!selectedNeed || !microUpdate.trim()) {
       toast.error(t.fillAllFields || "Please fill in the required fields");
       return;
@@ -269,25 +706,43 @@ export function HomePage() {
 
     setIsSubmitting(true);
 
-    const newReport: QueuedReport = {
-      id: `CASE-${Date.now()}`,
-      needType: selectedNeed,
-      microUpdate: microUpdate,
-      timestamp: new Date().toISOString(),
-      status: isOnline ? "sending" : "queued",
+    const userId = localStorage.getItem("userId");
+    const userMode = localStorage.getItem("userMode");
+
+    const reportData = {
+      user_id: userMode === "anonymous" ? undefined : userId,
+      need_type: selectedNeed,
+      description: microUpdate,
+      location_address: location, // Human-readable location name
+      location_coords: locationCoords || undefined, // GPS coordinates
+      number_of_dependents: parseInt(dependents) || parseInt(customDependents) || 0,
+      vulnerable_tags: vulnerableTags,
+      is_anonymous: userMode === "anonymous",
+      share_with_responders: shareWithResponders,
+      share_precise_location: sharePreciseCoords,
+      priority: selectedFlair === "urgent" ? "high" : "medium",
+      status: "submitted",
     };
 
-    // Simulate submission
-    setTimeout(() => {
-      if (isOnline) {
-        toast.success(t.reportSubmitted || "Report submitted successfully!", {
-          description: `Case ID: ${newReport.id}`,
-          duration: 4000,
-        });
-      } else {
-        setQueuedReports(prev => [...prev, { ...newReport, status: "queued" }]);
-        toast.info(t.reportQueued || "Report queued - will send when online");
-      }
+    // Handle offline mode
+    if (!isOnline) {
+      const queue = JSON.parse(localStorage.getItem("offlineQueue") || "[]");
+      queue.push({
+        action: "create_report",
+        payload: reportData,
+        timestamp: new Date().toISOString(),
+      });
+      localStorage.setItem("offlineQueue", JSON.stringify(queue));
+      
+      setQueuedReports(prev => [...prev, {
+        id: `CASE-${Date.now()}`,
+        needType: selectedNeed,
+        microUpdate: microUpdate,
+        timestamp: new Date().toISOString(),
+        status: "queued",
+      }]);
+      
+      toast.info(t.reportQueued || "Report queued - will send when online");
       
       // Reset form
       setSelectedNeed(null);
@@ -299,7 +754,55 @@ export function HomePage() {
       setVulnerableTags([]);
       setStep(1);
       setIsSubmitting(false);
-    }, 1200);
+      return;
+    }
+
+    try {
+      // Submit to Supabase
+      const { data, error } = await ReportService.createReport(reportData);
+
+      if (error) {
+        // If Supabase fails, queue for later
+        const queue = JSON.parse(localStorage.getItem("offlineQueue") || "[]");
+        queue.push({
+          action: "create_report",
+          payload: reportData,
+          timestamp: new Date().toISOString(),
+        });
+        localStorage.setItem("offlineQueue", JSON.stringify(queue));
+        
+        toast.warning("Report queued - will retry when connection is restored");
+      } else {
+        toast.success(t.reportSubmitted || "Report submitted successfully!", {
+          description: `Case ID: ${data?.case_id || "N/A"}`,
+          duration: 4000,
+        });
+      }
+
+      // Reset form
+      setSelectedNeed(null);
+      setMicroUpdate("");
+      setDependents("0");
+      setCustomDependents("");
+      setSelectedFlair(null);
+      setPhoto(null);
+      setVulnerableTags([]);
+      setStep(1);
+    } catch (error: any) {
+      console.error("Report submission error:", error);
+      // Queue for retry
+      const queue = JSON.parse(localStorage.getItem("offlineQueue") || "[]");
+      queue.push({
+        action: "create_report",
+        payload: reportData,
+        timestamp: new Date().toISOString(),
+      });
+      localStorage.setItem("offlineQueue", JSON.stringify(queue));
+      
+      toast.error(error.message || "Failed to submit report. Queued for retry.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSendViaSMS = () => {
@@ -374,7 +877,7 @@ export function HomePage() {
                     <Clock className="h-5 w-5 text-[#11111b] dark:text-[#b4befe]" />
                     <p className="text-xs text-gray-600 dark:text-gray-400">{t.pendingVerifications}</p>
                   </div>
-                  <p className="text-2xl text-[#11111b] dark:text-[#b4befe]">12</p>
+                  <p className="text-2xl text-[#11111b] dark:text-[#b4befe]">{mockReports.length}</p>
                 </motion.div>
                 
                 <motion.div
@@ -564,19 +1067,36 @@ export function HomePage() {
                   return (
                     <motion.button
                       key={need.type}
+                      type="button"
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.05 }}
-                      whileHover={{ scale: 1.05, y: -5 }}
+                      whileHover={{ scale: 1.08, y: -8, rotate: 2 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => handleNeedSelect(need.type)}
-                      className="group relative p-6 rounded-2xl border-2 border-transparent transition-all overflow-hidden bg-white dark:bg-gray-800 hover:shadow-2xl"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleNeedSelect(need.type);
+                      }}
+                      className={`group relative p-6 rounded-[3rem] border-0 transition-all overflow-hidden bg-gradient-to-br ${need.gradient} hover:shadow-2xl cursor-pointer backdrop-blur-sm`}
+                      style={{ 
+                        pointerEvents: 'auto',
+                        boxShadow: '0 10px 40px -10px rgba(0, 0, 0, 0.2)'
+                      }}
                     >
-                      <div className={`absolute inset-0 bg-gradient-to-br ${need.gradient} opacity-0 group-hover:opacity-10 transition-opacity`} />
-                      <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${need.gradient} mb-3 group-hover:scale-110 transition-transform`}>
-                        <Icon className="h-8 w-8 text-white" />
+                      {/* Animated gradient overlay for depth */}
+                      <div className={`absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`} />
+                      
+                      {/* Shimmer effect */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
+                      
+                      {/* Icon container with blended background */}
+                      <div className={`relative inline-flex p-3 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 mb-3 group-hover:scale-110 group-hover:bg-white/30 transition-all duration-300`}>
+                        <Icon className="h-8 w-8 text-white drop-shadow-lg" />
                       </div>
-                      <p className="text-sm text-center">{need.label}</p>
+                      
+                      {/* Text with better contrast */}
+                      <p className="text-sm text-center text-white font-medium drop-shadow-md relative z-10">{need.label}</p>
                     </motion.button>
                   );
                 })}
@@ -584,6 +1104,11 @@ export function HomePage() {
             </CardContent>
           </Card>
         </motion.div>
+      )}
+
+      {/* AI ChatBox Dropdown - Only for Citizens */}
+      {userMode === "user" && step === 1 && (
+        <AIChatDropdown />
       )}
 
       {/* Step 2: Add Details */}
@@ -693,10 +1218,18 @@ export function HomePage() {
 
               {/* Location */}
               <div className="space-y-3">
-                <Label>{t.location}</Label>
-                <div className="flex gap-2">
-                  <Input value={location} readOnly className="flex-1 h-12" />
-                  <Button variant="outline" onClick={handleGetLocation} className="h-12">
+                <Label className="font-semibold text-gray-900 dark:text-gray-100">{t.location}</Label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 relative">
+                    <div className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100">
+                      {location}
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleGetLocation} 
+                    className="h-[42px] w-[42px] p-0 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
                     <MapPin className="h-5 w-5" />
                   </Button>
                 </div>
@@ -927,11 +1460,32 @@ export function HomePage() {
               </div>
 
               <div>
-                <Label className="text-gray-600 dark:text-gray-400">{t.reportLocation}</Label>
-                <p className="mt-1 flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  {selectedReport.location}
-                </p>
+                <Label className="font-semibold text-gray-900 dark:text-gray-100 mb-2 block">{t.reportLocation}</Label>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-900 dark:text-gray-100">
+                    {selectedReport.location}
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="h-[42px] w-[42px] p-0 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                    onClick={() => {
+                      // Open location in maps using stored coordinates or parse from location string
+                      if (selectedReport.locationCoords) {
+                        window.open(`https://www.google.com/maps?q=${selectedReport.locationCoords.lat},${selectedReport.locationCoords.lng}`, '_blank');
+                      } else {
+                        // Fallback: try to parse coordinates from location string
+                        const coords = selectedReport.location.match(/-?\d+\.?\d*/g);
+                        if (coords && coords.length >= 2) {
+                          window.open(`https://www.google.com/maps?q=${coords[0]},${coords[1]}`, '_blank');
+                        } else {
+                          toast.info("Location coordinates not available");
+                        }
+                      }
+                    }}
+                  >
+                    <MapPin className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
 
               <div>
@@ -1059,8 +1613,6 @@ export function HomePage() {
         </DialogContent>
       </Dialog>
 
-      {/* AI ChatBox - Only for Citizens */}
-      {userMode === "user" && <ChatBox />}
     </div>
   );
 }

@@ -6,8 +6,9 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Environment variables (replace with your actual Supabase credentials)
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+// For Vite, use import.meta.env instead of process.env
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL || 'https://kamikyfpgxvowzkpodtk.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImthbWlreWZwZ3h2b3d6a3BvZHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI1ODY0OTksImV4cCI6MjA3ODE2MjQ5OX0.dS_mRMmyYjq_oy5xJi1IkaUuJViIzh-ShEoRyXdLNFQ';
 
 // Create Supabase client
 export const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

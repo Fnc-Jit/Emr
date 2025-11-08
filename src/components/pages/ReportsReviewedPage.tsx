@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Clock, 
   CheckCircle2, 
@@ -31,6 +31,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { useLanguage } from "../LanguageProvider";
+import { VolunteerService } from "../../database/services";
 
 type NeedType = "water" | "medical" | "shelter" | "food" | "other";
 type VerificationAction = "verified" | "added_context" | "flagged";
@@ -57,47 +58,8 @@ export function ReportsReviewedPage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ReviewedReport | null>(null);
 
-  // Mock data for reviewed reports
-  const [reviewedReports] = useState<ReviewedReport[]>([
-    {
-      id: "1",
-      caseId: "CASE-2024-045",
-      needType: "water",
-      description: "Water supply disrupted, community of 50+ families",
-      location: "Koramangala, Bangalore",
-      reportedAt: "2024-11-07T08:30:00Z",
-      reviewedAt: "2024-11-07T09:15:00Z",
-      verificationAction: "verified",
-      myNotes: "Confirmed on-site. Water tanker dispatched.",
-      dependents: 12,
-      resolutionStatus: "resolved",
-    },
-    {
-      id: "2",
-      caseId: "CASE-2024-046",
-      needType: "medical",
-      description: "Need urgent medical supplies for elderly residents",
-      location: "MG Road Area, Bangalore",
-      reportedAt: "2024-11-07T10:00:00Z",
-      reviewedAt: "2024-11-07T10:30:00Z",
-      verificationAction: "verified",
-      myNotes: "Verified. Ambulance and medical team dispatched.",
-      dependents: 8,
-      resolutionStatus: "in_progress",
-    },
-    {
-      id: "3",
-      caseId: "CASE-2024-041",
-      needType: "shelter",
-      description: "Families displaced due to flooding",
-      location: "Whitefield, Bangalore",
-      reportedAt: "2024-11-06T15:20:00Z",
-      reviewedAt: "2024-11-06T16:45:00Z",
-      verificationAction: "verified",
-      myNotes: "15 families confirmed displaced. Shelter arranged at community center.",
-      dependents: 15,
-      resolutionStatus: "resolved",
-    },
+  // Initial mock data (for demo purposes)
+  const initialMockData: ReviewedReport[] = [
     {
       id: "4",
       caseId: "CASE-2024-038",
@@ -150,7 +112,96 @@ export function ReportsReviewedPage() {
       dependents: 4,
       resolutionStatus: "resolved",
     },
-  ]);
+  ];
+
+  const [reviewedReports, setReviewedReports] = useState<ReviewedReport[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load reviewed reports from Supabase and localStorage
+  const loadReviewedReports = async (): Promise<ReviewedReport[]> => {
+    const volunteerId = localStorage.getItem("volunteerId");
+    
+    // Load from localStorage first (for immediate display)
+    const stored = localStorage.getItem("reviewedReports");
+    const storedReports: ReviewedReport[] = stored ? JSON.parse(stored) : [];
+    
+    // Merge with initial mock data, avoiding duplicates
+    const existingIds = new Set(storedReports.map(r => r.id));
+    const uniqueMockData = initialMockData.filter(r => !existingIds.has(r.id));
+    const localReports = [...storedReports, ...uniqueMockData];
+
+    // If volunteer is logged in, fetch from Supabase
+    if (volunteerId) {
+      try {
+        const { data: verifications, error } = await VolunteerService.getVolunteerVerifications(volunteerId, 100);
+        
+        if (!error && verifications) {
+          // Transform Supabase verifications to ReviewedReport format
+          const supabaseReports: ReviewedReport[] = verifications.map((v: any) => ({
+            id: v.report_id,
+            caseId: v.report?.case_id || `CASE-${v.report_id.slice(0, 8)}`,
+            needType: v.report?.need_type || "other",
+            description: v.report?.description || "No description",
+            location: v.report?.location_address || "Unknown",
+            reportedAt: v.report?.created_at || v.created_at,
+            reviewedAt: v.created_at,
+            verificationAction: v.verification_status === 'confirmed' ? 'verified' : 
+                              v.verification_status === 'disputed' ? 'flagged' : 'added_context',
+            myNotes: v.notes,
+            dependents: v.report?.number_of_dependents,
+            resolutionStatus: v.report?.status === 'verified' ? 'resolved' : 
+                            v.report?.status === 'false' ? 'escalated' : 'in_progress',
+          }));
+
+          // Merge Supabase reports with local reports, avoiding duplicates
+          const supabaseIds = new Set(supabaseReports.map(r => r.id));
+          const uniqueLocalReports = localReports.filter(r => !supabaseIds.has(r.id));
+          
+          return [...supabaseReports, ...uniqueLocalReports].sort((a, b) => 
+            new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime()
+          );
+        }
+      } catch (error) {
+        console.error("Error loading verifications from Supabase:", error);
+      }
+    }
+
+    // Return local reports if Supabase fetch fails or not logged in
+    return localReports.sort((a, b) => 
+      new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime()
+    );
+  };
+
+  // Load reports on mount
+  useEffect(() => {
+    const fetchReports = async () => {
+      setLoading(true);
+      const reports = await loadReviewedReports();
+      setReviewedReports(reports);
+      setLoading(false);
+    };
+    
+    fetchReports();
+  }, []);
+
+  // Listen for storage changes to update the list
+  useEffect(() => {
+    const handleStorageChange = async () => {
+      const reports = await loadReviewedReports();
+      setReviewedReports(reports);
+    };
+
+    // Listen for storage events (from other tabs/windows)
+    window.addEventListener("storage", handleStorageChange);
+    
+    // Listen for custom events (from same tab - dispatched by HomePage)
+    window.addEventListener("reviewedReportsUpdated", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("reviewedReportsUpdated", handleStorageChange);
+    };
+  }, []);
 
   const needTypes = [
     { value: "water", label: t.needWater, icon: Droplets, color: "blue" },

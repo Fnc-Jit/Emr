@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Clock, 
   AlertCircle, 
@@ -44,6 +44,7 @@ import {
 } from "../ui/alert-dialog";
 import { toast } from "sonner@2.0.3";
 import { useLanguage } from "../LanguageProvider";
+import { ReportService } from "../../database/services";
 
 type ReportStatus = "queued" | "sent" | "verified" | "failed" | "duplicate";
 type NeedType = "water" | "medical" | "shelter" | "food" | "other";
@@ -78,67 +79,84 @@ export function PreviousReportsPage() {
   const [editDescription, setEditDescription] = useState("");
   const [editDependents, setEditDependents] = useState("0");
 
-  // Mock data for previous reports
-  const [reports, setReports] = useState<Report[]>([
-    {
-      id: "1",
-      caseId: "CASE-2024-001",
-      needType: "water",
-      description: "Urgent - immediate assistance needed for water supply",
-      status: "verified",
-      priority: "high",
-      location: "Approx: 12.9716, 77.5946",
-      timestamp: "2024-11-07T10:30:00Z",
-      verifications: 3,
-      dependents: 5,
-    },
-    {
-      id: "2",
-      caseId: "CASE-2024-002",
-      needType: "medical",
-      description: "Medical emergency - elderly person needs medication",
-      status: "sent",
-      priority: "critical",
-      location: "Approx: 12.9800, 77.6000",
-      timestamp: "2024-11-06T14:20:00Z",
-      verifications: 1,
-      dependents: 2,
-    },
-    {
-      id: "3",
-      caseId: "CASE-2024-003",
-      needType: "shelter",
-      description: "Multiple families affected, need temporary shelter",
-      status: "verified",
-      priority: "medium",
-      location: "Approx: 12.9500, 77.5800",
-      timestamp: "2024-11-05T08:15:00Z",
-      verifications: 5,
-      dependents: 12,
-    },
-    {
-      id: "4",
-      caseId: "CASE-2024-004",
-      needType: "food",
-      description: "Food supplies needed for community center",
-      status: "sent",
-      priority: "medium",
-      location: "Approx: 12.9650, 77.5900",
-      timestamp: "2024-11-04T16:45:00Z",
-      verifications: 2,
-    },
-    {
-      id: "5",
-      caseId: "CASE-2024-005",
-      needType: "other",
-      description: "Road access blocked, communication difficult",
-      status: "queued",
-      priority: "low",
-      location: "Approx: 12.9400, 77.5700",
-      timestamp: "2024-11-03T12:00:00Z",
-      verifications: 0,
-    },
-  ]);
+  // Reports data - fetched from Supabase
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load reports from Supabase
+  useEffect(() => {
+    const loadReports = async () => {
+      setLoading(true);
+      try {
+        const userId = localStorage.getItem("userId");
+        if (!userId) {
+          // Fallback to mock data if not logged in
+          setReports([
+            {
+              id: "1",
+              caseId: "CASE-2024-001",
+              needType: "water",
+              description: "Urgent - immediate assistance needed for water supply",
+              status: "verified",
+              priority: "high",
+              location: "Approx: 12.9716, 77.5946",
+              timestamp: "2024-11-07T10:30:00Z",
+              verifications: 3,
+              dependents: 5,
+            },
+            {
+              id: "2",
+              caseId: "CASE-2024-002",
+              needType: "medical",
+              description: "Medical emergency - elderly person needs medication",
+              status: "sent",
+              priority: "critical",
+              location: "Approx: 12.9800, 77.6000",
+              timestamp: "2024-11-06T14:20:00Z",
+              verifications: 1,
+              dependents: 2,
+            },
+          ]);
+          setLoading(false);
+          return;
+        }
+
+        const { data, error } = await ReportService.getUserReports(userId, {
+          limit: 100,
+        });
+
+        if (error) {
+          console.error("Error loading reports:", error);
+          toast.error("Failed to load reports");
+          setLoading(false);
+          return;
+        }
+
+        // Transform Supabase data to Report format
+        const transformedReports: Report[] = (data || []).map((report: any) => ({
+          id: report.id,
+          caseId: report.case_id,
+          needType: report.need_type,
+          description: report.description,
+          status: report.status as ReportStatus,
+          priority: report.priority as Priority,
+          location: report.location_address || report.location_coordinates || "Unknown",
+          timestamp: report.created_at,
+          verifications: report.verification_count || 0,
+          dependents: report.number_of_dependents,
+        }));
+
+        setReports(transformedReports);
+      } catch (error) {
+        console.error("Error loading reports:", error);
+        toast.error("Failed to load reports");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadReports();
+  }, []);
 
   const getStatusColor = (status: ReportStatus) => {
     switch (status) {

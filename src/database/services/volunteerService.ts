@@ -169,13 +169,16 @@ export class VolunteerService {
   }
 
   /**
-   * Get volunteer's verification history
+   * Get volunteer's verification history with report details
    */
-  static async getVolunteerVerifications(volunteerId: string, limit = 50): Promise<{ data: ReportVerification[]; error: any }> {
+  static async getVolunteerVerifications(volunteerId: string, limit = 50): Promise<{ data: any[]; error: any }> {
     try {
       const { data, error } = await supabase
         .from('report_verifications')
-        .select('*')
+        .select(`
+          *,
+          report:emergency_reports(*)
+        `)
         .eq('volunteer_id', volunteerId)
         .order('created_at', { ascending: false })
         .limit(limit);
