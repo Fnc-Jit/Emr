@@ -235,12 +235,6 @@ export function HomePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const verificationPhotoInputRef = useRef<HTMLInputElement>(null);
   
-  // Get user mode from localStorage
-  useEffect(() => {
-    const mode = localStorage.getItem("userMode") || "user";
-    setUserMode(mode);
-  }, []);
-
   // Reports data for volunteer dashboard - fetched from Supabase
   const [mockReports, setMockReports] = useState<ReportData[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
@@ -251,8 +245,16 @@ export function HomePage() {
 
   // Load reports from Supabase for volunteers
   const loadReports = async () => {
-    if (userMode !== "volunteer") return;
+    console.log("loadReports called");
+    // Check userMode from localStorage directly to avoid race conditions
+    const currentUserMode = localStorage.getItem("userMode") || "user";
+    console.log("Current userMode:", currentUserMode);
+    if (currentUserMode !== "volunteer") {
+      console.log("Not a volunteer, skipping report load");
+      return;
+    }
 
+    console.log("Starting to load reports for volunteer...");
     setReportsLoading(true);
     try {
         // Check if user is authenticated
@@ -263,78 +265,106 @@ export function HomePage() {
           setReportsLoading(false);
           return;
         }
-
-        // Check if this is a hardcoded demo volunteer account
-        const isDemoVolunteer = userId.startsWith('demo-volunteer-');
         
-        if (isDemoVolunteer) {
-          // For demo accounts, skip Supabase check and load reports directly
-          console.log("Using demo volunteer account");
-          // Ensure volunteerId is set
-          if (!localStorage.getItem("volunteerId")) {
-            localStorage.setItem("volunteerId", localStorage.getItem("userId")?.replace("volunteer", "vol") || "demo-vol-1");
-          }
-        } else {
-          // Verify volunteer status and get volunteerId for real accounts
-          const { data: volunteerData, error: volunteerError } = await VolunteerService.getVolunteerByUserId(userId);
-          if (volunteerError || !volunteerData) {
-            console.error("Volunteer record not found or error:", volunteerError);
-            toast.error("Volunteer account not found. Please contact administrator.", {
-              duration: 5000,
-            });
-            setMockReports([]);
-            setReportsLoading(false);
-            return;
-          }
+        console.log("Loading reports for volunteer:", userId);
 
-          if (volunteerData.verification_status !== 'approved') {
-            console.warn("Volunteer account not approved:", volunteerData.verification_status);
-            toast.warning("Your volunteer account is pending approval.", {
-              duration: 5000,
-            });
-            setMockReports([]);
-            setReportsLoading(false);
-            return;
-          }
-
-          // Ensure volunteerId is stored in localStorage
-          if (!localStorage.getItem("volunteerId")) {
-            localStorage.setItem("volunteerId", volunteerData.id);
-          }
+        // Try to verify volunteer status and get volunteerId (but don't fail if record doesn't exist)
+        const { data: volunteerData, error: volunteerError } = await VolunteerService.getVolunteerByUserId(userId);
+        
+        if (volunteerData && volunteerData.verification_status !== 'approved') {
+          console.warn("Volunteer account not approved:", volunteerData.verification_status);
+          toast.warning("Your volunteer account is pending approval.", {
+            duration: 5000,
+          });
+          setMockReports([]);
+          setReportsLoading(false);
+          return;
         }
 
-        // Fetch all pending/active reports (not resolved, duplicate, or false)
-        // Remove status filter to show all reports that need verification
-        const { data, error } = await ReportService.getAllReports({
-          // Don't filter by status - show all non-resolved reports
+        // Ensure volunteerId is stored in localStorage if volunteer record exists
+        if (volunteerData && !localStorage.getItem("volunteerId")) {
+          localStorage.setItem("volunteerId", volunteerData.id);
+        } else if (!localStorage.getItem("volunteerId")) {
+          // Generate a temporary volunteerId for volunteers without a database record
+          const tempVolunteerId = `temp-vol-${Date.now()}`;
+          localStorage.setItem("volunteerId", tempVolunteerId);
+          console.log("Generated temporary volunteerId:", tempVolunteerId);
+        }
+        
+        // Verify Supabase session is valid (required for RLS policies)
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+          console.error("No valid Supabase session found:", sessionError);
+          toast.error("Authentication session expired. Please log in again.", {
+            duration: 5000,
+          });
+          setMockReports([]);
+          setReportsLoading(false);
+          return;
+        }
+        console.log("Supabase session verified for volunteer:", session.user.id);
+
+        // Fetch unanswered/unverified reports (status: submitted or queued)
+        console.log("Fetching unanswered reports from Supabase...");
+        console.log("Volunteer ID from localStorage:", localStorage.getItem("volunteerId"));
+        console.log("About to call ReportService.getUnansweredReports...");
+        
+        const { data, error } = await ReportService.getUnansweredReports({
           limit: 50,
+        });
+
+        console.log("ReportService.getUnansweredReports response:", { 
+          dataLength: data?.length || 0, 
+          error: error ? JSON.stringify(error, null, 2) : null,
+          hasData: !!data 
         });
 
         if (error) {
           console.error("Error loading reports from Supabase:", error);
           console.error("Error details:", JSON.stringify(error, null, 2));
+          console.error("Error code:", error.code);
+          console.error("Error message:", error.message);
+          console.error("Error hint:", error.hint);
           
           // Check if it's an RLS policy error
-          if (error.message?.includes("policy") || error.message?.includes("RLS")) {
+          if (error.message?.includes("policy") || error.message?.includes("RLS") || error.code === "42501") {
+            console.error("RLS Policy Error detected - volunteer may not have access");
             toast.error("Access denied. Please ensure your volunteer account is approved.", {
+              duration: 5000,
+            });
+          } else if (error.message?.includes("JWT") || error.code === "PGRST301") {
+            console.error("Authentication error - session may be invalid");
+            toast.error("Authentication error. Please log in again.", {
+              duration: 5000,
+            });
+          } else {
+            toast.error(`Failed to load reports: ${error.message || "Unknown error"}`, {
               duration: 5000,
             });
           }
           
           // Don't fallback to mock data - show empty state instead
           setMockReports([]);
+          setReportsLoading(false);
           return;
         }
 
-        // Filter out resolved, duplicate, and false reports
-        const activeReports = (data || []).filter((report: any) => 
-          report.status !== 'resolved' && 
-          report.status !== 'duplicate' && 
-          report.status !== 'false'
-        );
+        console.log(`Fetched ${data?.length || 0} unanswered reports from Supabase`);
+        console.log("Sample report data:", data?.[0]);
+        
+        if (!data || data.length === 0) {
+          console.log("No unanswered reports found in database");
+          console.log("This could mean:");
+          console.log("1. No reports have been created yet");
+          console.log("2. All reports have been verified/resolved");
+          console.log("3. RLS policies are blocking access silently");
+          setMockReports([]);
+          setReportsLoading(false);
+          return;
+        }
 
         // Transform Supabase data to ReportData format
-        const transformedReports: ReportData[] = activeReports.map((report: any) => ({
+        const transformedReports: ReportData[] = (data || []).map((report: any) => ({
           id: report.id,
           caseId: report.case_id,
           needType: report.need_type,
@@ -342,10 +372,10 @@ export function HomePage() {
           location: report.location_address || 
                    (report.location_coords ? `${report.location_coords.lat}, ${report.location_coords.lng}` : null) ||
                    "Unknown",
-          locationCoords: report.location_coords || undefined, // Store coordinates for map button
+          locationCoords: report.location_coords || undefined,
           dependents: report.number_of_dependents || 0,
           timestamp: report.created_at,
-          priority: report.priority || "medium", // Include priority from database
+          priority: report.priority || "medium",
         }));
 
         // Filter out already reviewed reports from localStorage
@@ -367,7 +397,8 @@ export function HomePage() {
           return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
         });
 
-        console.log(`Loaded ${sortedReports.length} reports from Supabase (${activeReports.length} active, ${transformedReports.length - filteredReports.length} already reviewed)`);
+        console.log(`Loaded ${sortedReports.length} unanswered reports from Supabase (${transformedReports.length - filteredReports.length} already reviewed)`);
+        console.log("Reports data:", sortedReports);
         setMockReports(sortedReports);
         
         // Update volunteer stats
@@ -387,15 +418,87 @@ export function HomePage() {
     }
   };
 
-  // Load reports on mount and when userMode changes
+  // Get user mode from localStorage and load reports
   useEffect(() => {
-    loadReports();
+    const mode = localStorage.getItem("userMode") || "user";
+    setUserMode(mode);
+    
+    // Load reports immediately if volunteer (don't wait for state update)
+    if (mode === "volunteer") {
+      console.log("Volunteer mode detected, loading reports...");
+      // Use setTimeout to ensure component is fully mounted
+      setTimeout(() => {
+        loadReports();
+      }, 100);
+    }
+  }, []);
+
+  // Also reload reports when userMode state changes
+  useEffect(() => {
+    if (userMode === "volunteer") {
+      console.log("UserMode changed to volunteer, loading reports...");
+      loadReports();
+    }
   }, [userMode]);
+  
+  // Listen for login events to reload reports
+  useEffect(() => {
+    const handleLogin = () => {
+      const mode = localStorage.getItem("userMode");
+      if (mode === "volunteer") {
+        console.log("Login detected, loading reports...");
+        setTimeout(() => {
+          loadReports();
+        }, 500); // Give time for localStorage to be set
+      }
+    };
+    
+    // Listen for custom login event
+    window.addEventListener("userLoggedIn", handleLogin);
+    
+    // Also check on mount in case login happened before component mounted
+    const checkLogin = () => {
+      const mode = localStorage.getItem("userMode");
+      const isAuth = localStorage.getItem("isAuthenticated");
+      if (mode === "volunteer" && isAuth === "true") {
+        console.log("Already logged in as volunteer, loading reports...");
+        setTimeout(() => {
+          loadReports();
+        }, 500);
+      }
+    };
+    
+    // Check after a short delay to ensure localStorage is set
+    const timeoutId = setTimeout(checkLogin, 1000);
+    
+    return () => {
+      window.removeEventListener("userLoggedIn", handleLogin);
+      clearTimeout(timeoutId);
+    };
+  }, []);
 
   // Refresh handler
   const handleRefresh = async () => {
-    await loadReports();
-    toast.success("Reports refreshed successfully");
+    console.log("handleRefresh triggered");
+    const currentUserMode = localStorage.getItem("userMode") || "user";
+    console.log("Current user mode:", currentUserMode);
+    
+    if (currentUserMode !== "volunteer") {
+      console.warn("Not in volunteer mode, skipping refresh");
+      toast.warning("Only volunteers can view reports to verify");
+      return;
+    }
+    
+    try {
+      console.log("Loading reports...");
+      await loadReports();
+      toast.success("Reports refreshed successfully!", {
+        duration: 3000,
+      });
+    } catch (error: any) {
+      console.error("Error refreshing reports:", error);
+      toast.error(`Failed to refresh reports: ${error.message || "Unknown error"}`);
+    }
   };
 
   const needs = [
@@ -952,18 +1055,37 @@ export function HomePage() {
                 <div className="flex items-center justify-between">
                   <h3 className="text-gray-900 dark:text-gray-100">{t.reportsToVerify}</h3>
                   <Button
-                    size="sm"
-                    variant="outline"
                     onClick={handleRefresh}
                     disabled={reportsLoading}
-                    className="h-8 px-3"
+                    className="h-8 px-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
                   >
                     <RefreshCw className={`h-4 w-4 mr-2 ${reportsLoading ? 'animate-spin' : ''}`} />
                     Refresh
                   </Button>
                 </div>
                 
-                {mockReports.map((report, index) => {
+                {reportsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-center">
+                      <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-orange-600" />
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Loading reports...</p>
+                    </div>
+                  </div>
+                ) : mockReports.length === 0 ? (
+                  <div className="text-center py-8">
+                    <AlertCircle className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">No reports to verify</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">Reports will appear here when available</p>
+                    <Button
+                      onClick={handleRefresh}
+                      className="mt-4 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh
+                    </Button>
+                  </div>
+                ) : (
+                  mockReports.map((report, index) => {
                   const needType = needs.find(n => n.type === report.needType);
                   const NeedIcon = needType?.icon || AlertCircle;
                   
@@ -1056,7 +1178,8 @@ export function HomePage() {
                       </div>
                     </motion.div>
                   );
-                })}
+                  })
+                )}
               </div>
             </CardContent>
           </Card>

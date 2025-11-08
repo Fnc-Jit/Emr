@@ -184,6 +184,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           localStorage.setItem("volunteerId", hardcodedVol.volunteerId);
           localStorage.setItem("userName", hardcodedVol.name);
           toast.success(t.loginSuccessful);
+          // Dispatch event for HomePage to listen to
+          window.dispatchEvent(new CustomEvent("userLoggedIn", { detail: { userMode: "volunteer" } }));
           onLogin();
         } else {
           toast.error(authError.message || t.invalidCredentials || "Invalid credentials");
@@ -227,6 +229,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         localStorage.setItem("userName", userData?.full_name || volEmail);
         
         toast.success(t.loginSuccessful);
+        // Dispatch event for HomePage to listen to
+        window.dispatchEvent(new CustomEvent("userLoggedIn", { detail: { userMode: "volunteer" } }));
         onLogin();
       }
     } catch (error: any) {

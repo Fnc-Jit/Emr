@@ -126,11 +126,16 @@ export class ReportService {
     offset?: number;
   }): Promise<{ data: EmergencyReport[]; error: any; count?: number }> {
     try {
+      console.log('[ReportService] getAllReports called with filters:', filters);
+      
       let query = supabase
         .from('emergency_reports')
-        .select('*', { count: 'exact' })
-        .order('priority', { ascending: false })
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' });
+      
+      // Order by created_at first (most recent), then by priority
+      // This ensures all reports are shown, even if priority is null
+      query = query.order('created_at', { ascending: false })
+                   .order('priority', { ascending: false });
       
       if (filters?.status) {
         query = query.eq('status', filters.status);
@@ -152,11 +157,90 @@ export class ReportService {
         query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
       }
       
+      console.log('[ReportService] Executing query...');
       const { data, error, count } = await query;
+      
+      console.log('[ReportService] Query result:', {
+        dataCount: data?.length || 0,
+        hasError: !!error,
+        error: error ? JSON.stringify(error, null, 2) : null,
+        count: count
+      });
+      
+      if (error) {
+        console.error('[ReportService] Error fetching reports:', error);
+        console.error('[ReportService] Error code:', error.code);
+        console.error('[ReportService] Error message:', error.message);
+        console.error('[ReportService] Error details:', error.details);
+        console.error('[ReportService] Error hint:', error.hint);
+      }
       
       return { data: data || [], error, count: count || 0 };
     } catch (error) {
-      console.error('Error fetching reports:', error);
+      console.error('[ReportService] Exception fetching reports:', error);
+      return { data: [], error };
+    }
+  }
+
+  /**
+   * Get unanswered/unverified reports (for volunteers to review)
+   * Returns reports with status 'submitted' or 'queued' that need verification
+   */
+  static async getUnansweredReports(filters?: {
+    priority?: string;
+    needType?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ data: EmergencyReport[]; error: any; count?: number }> {
+    try {
+      console.log('[ReportService] getUnansweredReports called with filters:', filters);
+      
+      let query = supabase
+        .from('emergency_reports')
+        .select('*', { count: 'exact' });
+      
+      // Filter for reports that need verification (submitted or queued status)
+      query = query.in('status', ['submitted', 'queued']);
+      
+      // Order by priority (urgent first), then by creation time (newest first)
+      query = query.order('priority', { ascending: false })
+                   .order('created_at', { ascending: false });
+      
+      if (filters?.priority) {
+        query = query.eq('priority', filters.priority);
+      }
+      
+      if (filters?.needType) {
+        query = query.eq('need_type', filters.needType);
+      }
+      
+      if (filters?.limit) {
+        query = query.limit(filters.limit);
+      }
+      
+      if (filters?.offset) {
+        query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
+      }
+      
+      console.log('[ReportService] Executing getUnansweredReports query...');
+      const { data, error, count } = await query;
+      
+      console.log('[ReportService] getUnansweredReports result:', {
+        dataCount: data?.length || 0,
+        hasError: !!error,
+        error: error ? JSON.stringify(error, null, 2) : null,
+        count: count
+      });
+      
+      if (error) {
+        console.error('[ReportService] Error fetching unanswered reports:', error);
+        console.error('[ReportService] Error code:', error.code);
+        console.error('[ReportService] Error message:', error.message);
+      }
+      
+      return { data: data || [], error, count: count || 0 };
+    } catch (error) {
+      console.error('[ReportService] Exception fetching unanswered reports:', error);
       return { data: [], error };
     }
   }

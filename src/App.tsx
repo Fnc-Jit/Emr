@@ -31,61 +31,20 @@ function AppContent() {
   }, []);
 
   // Check for existing authentication on page load
+  // DISABLED: Always show login page first - don't auto-restore authentication
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const storedAuth = localStorage.getItem("isAuthenticated");
-        const userId = localStorage.getItem("userId");
-        const userMode = localStorage.getItem("userMode");
-
-        if (storedAuth === "true" && userId) {
-          // Check if it's a hardcoded demo account (doesn't have Supabase session)
-          if (userId.startsWith("demo-")) {
-            // For hardcoded accounts, just restore from localStorage
-            setIsAuthenticated(true);
-            // Restore current page from localStorage
-            const savedPage = localStorage.getItem("currentPage");
-            if (savedPage) {
-              setCurrentPage(savedPage);
-            }
-            setIsCheckingAuth(false);
-            return;
-          }
-
-          // For real Supabase users, verify the session is still valid
-          const { data: { session }, error } = await supabase.auth.getSession();
-          
-          if (error) {
-            console.error("Session check error:", error);
-            // Clear invalid auth state
-            localStorage.removeItem("isAuthenticated");
-            localStorage.removeItem("userId");
-            localStorage.removeItem("userMode");
-            localStorage.removeItem("userName");
-            localStorage.removeItem("volunteerId");
-            localStorage.removeItem("currentPage");
-            setIsAuthenticated(false);
-          } else if (session && session.user.id === userId) {
-            // Valid session, restore authentication
-            setIsAuthenticated(true);
-            // Restore current page from localStorage
-            const savedPage = localStorage.getItem("currentPage");
-            if (savedPage) {
-              setCurrentPage(savedPage);
-            }
-          } else {
-            // No valid session, clear auth state
-            localStorage.removeItem("isAuthenticated");
-            localStorage.removeItem("userId");
-            localStorage.removeItem("userMode");
-            localStorage.removeItem("userName");
-            localStorage.removeItem("volunteerId");
-            localStorage.removeItem("currentPage");
-            setIsAuthenticated(false);
-          }
-        } else {
-          setIsAuthenticated(false);
-        }
+        // Always clear auth state on page load to ensure login page shows first
+        // Users must explicitly log in each time
+        console.log("Clearing auth state to show login page first");
+        localStorage.removeItem("isAuthenticated");
+        localStorage.removeItem("userId");
+        localStorage.removeItem("userMode");
+        localStorage.removeItem("userName");
+        localStorage.removeItem("volunteerId");
+        localStorage.removeItem("currentPage");
+        setIsAuthenticated(false);
       } catch (error) {
         console.error("Auth check error:", error);
         setIsAuthenticated(false);
