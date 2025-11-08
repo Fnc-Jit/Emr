@@ -1,21 +1,21 @@
 # Netlify Configuration for Vite + React App
 
 [build]
-  command = "npm ci && npm run build"
+  command = "npm install && npm run build"
   publish = "dist"
   environment = { NODE_VERSION = "22", NODE_ENV = "production" }
   ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':!*.md' ':!docs' ':!test' || exit 1"
 
 [context.production]
-  command = "npm ci && npm run build"
+  command = "npm install && npm run build"
   environment = { NODE_VERSION = "22", NODE_ENV = "production" }
 
 [context.deploy-preview]
-  command = "npm ci && npm run build"
+  command = "npm install && npm run build"
   environment = { NODE_VERSION = "22", NODE_ENV = "production" }
 
 [context.branch-deploy]
-  command = "npm ci && npm run build"
+  command = "npm install && npm run build"
   environment = { NODE_VERSION = "22", NODE_ENV = "production" }
 
 # Redirect for SPA (Single Page Application)
