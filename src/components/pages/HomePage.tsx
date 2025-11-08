@@ -271,14 +271,13 @@ export function HomePage() {
         // Try to verify volunteer status and get volunteerId (but don't fail if record doesn't exist)
         const { data: volunteerData, error: volunteerError } = await VolunteerService.getVolunteerByUserId(userId);
         
+        if (volunteerError) {
+          console.warn("Volunteer fetch error:", volunteerError);
+        }
+        
         if (volunteerData && volunteerData.verification_status !== 'approved') {
           console.warn("Volunteer account not approved:", volunteerData.verification_status);
-          toast.warning("Your volunteer account is pending approval.", {
-            duration: 5000,
-          });
-          setMockReports([]);
-          setReportsLoading(false);
-          return;
+          // Don't block - just log the warning
         }
 
         // Ensure volunteerId is stored in localStorage if volunteer record exists
@@ -293,16 +292,14 @@ export function HomePage() {
         
         // Verify Supabase session is valid (required for RLS policies)
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !session) {
-          console.error("No valid Supabase session found:", sessionError);
-          toast.error("Authentication session expired. Please log in again.", {
-            duration: 5000,
-          });
-          setMockReports([]);
-          setReportsLoading(false);
-          return;
+        if (sessionError) {
+          console.warn("Session error:", sessionError);
         }
-        console.log("Supabase session verified for volunteer:", session.user.id);
+        if (session) {
+          console.log("Supabase session verified for volunteer:", session.user.id);
+        } else {
+          console.warn("No active session - will attempt to fetch reports anyway");
+        }
 
         // Fetch unanswered/unverified reports (status: submitted or queued)
         console.log("Fetching unanswered reports from Supabase...");
