@@ -29,6 +29,7 @@ export function Header({ onNavigate, currentPage }: HeaderProps) {
   const [userName, setUserName] = useState<string>(
     localStorage.getItem("userName") || t.emergencyUser
   );
+  const [currentGreeting, setCurrentGreeting] = useState<string>("");
 
   const userMode = localStorage.getItem("userMode") || "user";
 
@@ -51,11 +52,75 @@ export function Header({ onNavigate, currentPage }: HeaderProps) {
   }, []);
 
   const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return t.goodMorning;
-    if (hour < 18) return t.goodAfternoon;
-    return t.goodEvening;
+    const now = new Date();
+    const hour = now.getHours();
+    
+    // More granular time-sensitive greetings
+    if (hour >= 5 && hour < 12) {
+      if (hour < 7) {
+        return "Good Early Morning";
+      } else if (hour < 10) {
+        return t.goodMorning;
+      } else {
+        return "Good Late Morning";
+      }
+    } else if (hour >= 12 && hour < 18) {
+      if (hour < 14) {
+        return t.goodAfternoon;
+      } else {
+        return "Good Late Afternoon";
+      }
+    } else if (hour >= 18 && hour < 22) {
+      return t.goodEvening;
+    } else if (hour >= 22 || hour < 2) {
+      return "Good Night";
+    } else {
+      return "Good Early Morning";
+    }
   };
+
+  // Update greeting on mount and periodically
+  useEffect(() => {
+    // Set initial greeting
+    const updateGreeting = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      
+      // More granular time-sensitive greetings
+      let greeting = "";
+      if (hour >= 5 && hour < 12) {
+        if (hour < 7) {
+          greeting = "Good Early Morning";
+        } else if (hour < 10) {
+          greeting = t.goodMorning;
+        } else {
+          greeting = "Good Late Morning";
+        }
+      } else if (hour >= 12 && hour < 18) {
+        if (hour < 14) {
+          greeting = t.goodAfternoon;
+        } else {
+          greeting = "Good Late Afternoon";
+        }
+      } else if (hour >= 18 && hour < 22) {
+        greeting = t.goodEvening;
+      } else if (hour >= 22 || hour < 2) {
+        greeting = "Good Night";
+      } else {
+        greeting = "Good Early Morning";
+      }
+      
+      setCurrentGreeting(greeting);
+    };
+
+    // Set initial greeting
+    updateGreeting();
+
+    // Update greeting every minute to catch time period changes
+    const interval = setInterval(updateGreeting, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [t.goodMorning, t.goodAfternoon, t.goodEvening]);
 
   const handleMenuClick = (page: string) => {
     // If clicking on the currently active page, just close the menu
@@ -147,12 +212,14 @@ export function Header({ onNavigate, currentPage }: HeaderProps) {
         {/* Greeting */}
         <div className="flex-1 text-center">
           <motion.h1
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
+            key={currentGreeting}
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 5 }}
+            transition={{ duration: 0.3 }}
             className="text-lg bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent"
           >
-            {getGreeting()}
+            {currentGreeting}
           </motion.h1>
         </div>
 
