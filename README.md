@@ -121,7 +121,3 @@ Get your OpenRouter API key from: https://openrouter.ai/keys
 ---
 
 Built with ❤️ for Res Q - Emergency Response Management
-<<<<<<< HEAD
-  
-=======
->>>>>>> 766c0c1 (feat: Update app name to Res Q and fix dynamic stats)
