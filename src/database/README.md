@@ -1,8 +1,8 @@
-# Emergency Response App - Database Documentation
+# Res Q - Database Documentation
 
 ## Overview
 
-This directory contains the complete database schema, configuration, and service layers for the Emergency Response Citizen & Volunteer App.
+This directory contains the complete database schema, configuration, and service layers for the Res Q Emergency Response Citizen & Volunteer App.
 
 ## Database Technology
 

@@ -165,7 +165,7 @@ export function RegisterPage({ onBack, onRegisterSuccess }: RegisterPageProps) {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="text-gray-600 dark:text-gray-400"
           >
-            Join the emergency response network
+            Join the Res Q network
           </motion.p>
         </div>
 

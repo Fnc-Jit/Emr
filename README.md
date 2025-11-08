@@ -117,4 +117,5 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 ---
 
-Built with ❤️ by Res Q
+Built with ❤️ for Res Q - Emergency Response Management
+  

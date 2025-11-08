@@ -1,4 +1,4 @@
-# Dependencies for Health ID Management App
+# Dependencies for Res Q - Emergency Response App
 
 ## Core Dependencies
 react
