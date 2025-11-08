@@ -337,6 +337,32 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
+          {/* Demo Credentials Box */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.45 }}
+            className="mb-4 p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/40 dark:to-emerald-950/40 border-2 border-green-200 dark:border-green-800/50"
+          >
+            <h3 className="text-sm font-semibold text-green-900 dark:text-green-100 mb-2">
+              📋 Demo Credentials
+            </h3>
+            <div className="space-y-2 text-xs">
+              <div className="text-green-800 dark:text-green-200">
+                <strong>Citizen Login:</strong>
+                <br />
+                <code className="bg-white/50 dark:bg-black/30 px-2 py-1 rounded">rpoo9309@gmail.com</code> / 
+                <code className="bg-white/50 dark:bg-black/30 px-2 py-1 rounded ml-1">user1234</code>
+              </div>
+              <div className="text-green-800 dark:text-green-200">
+                <strong>Volunteer Login:</strong>
+                <br />
+                <code className="bg-white/50 dark:bg-black/30 px-2 py-1 rounded">volunteer@emergency.com</code> / 
+                <code className="bg-white/50 dark:bg-black/30 px-2 py-1 rounded ml-1">emergency2024</code>
+              </div>
+            </div>
+          </motion.div>
+
           <Card className="border-0 shadow-2xl shadow-gray-200/50 dark:shadow-none backdrop-blur-sm bg-white/90 dark:bg-gray-900/90">
             <CardContent className="p-6">
               <Tabs defaultValue="user" className="w-full">
