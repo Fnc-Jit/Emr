@@ -1,0 +1,35 @@
+# Netlify ignore file
+# Files to exclude from Netlify builds
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build output (optional - Netlify will generate this)
+dist/
+
+# Development files
+.env.local
+.env.development
+.git
+.gitignore
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+coverage/
+.jest/
+
+# Documentation
+*.md
+CHANGELOG.md

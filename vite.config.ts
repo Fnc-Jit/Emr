@@ -53,7 +53,17 @@
     },
     build: {
       target: 'esnext',
-      outDir: 'build',
+      outDir: 'dist',
+      sourcemap: false,
+      minify: true,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', '@radix-ui/react-accordion', '@radix-ui/react-alert-dialog', '@radix-ui/react-aspect-ratio'],
+            supabase: ['@supabase/supabase-js'],
+          },
+        },
+      },
     },
     server: {
       port: 3000,
