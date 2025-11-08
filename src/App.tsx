@@ -13,16 +13,88 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import { LanguageProvider, useLanguage } from "./components/LanguageProvider";
 import { toast } from "sonner@2.0.3";
 import { initializeOfflineSync } from "./database/offlineQueue";
+import { supabase } from "./database/config";
 
 function AppContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentPage, setCurrentPage] = useState("home");
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  // Restore current page from localStorage, default to "home"
+  const [currentPage, setCurrentPage] = useState(() => {
+    return localStorage.getItem("currentPage") || "home";
+  });
   const [showResetPassword, setShowResetPassword] = useState(false);
   const { t } = useLanguage();
 
   // Initialize offline sync
   useEffect(() => {
     initializeOfflineSync();
+  }, []);
+
+  // Check for existing authentication on page load
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const storedAuth = localStorage.getItem("isAuthenticated");
+        const userId = localStorage.getItem("userId");
+        const userMode = localStorage.getItem("userMode");
+
+        if (storedAuth === "true" && userId) {
+          // Check if it's a hardcoded demo account (doesn't have Supabase session)
+          if (userId.startsWith("demo-")) {
+            // For hardcoded accounts, just restore from localStorage
+            setIsAuthenticated(true);
+            // Restore current page from localStorage
+            const savedPage = localStorage.getItem("currentPage");
+            if (savedPage) {
+              setCurrentPage(savedPage);
+            }
+            setIsCheckingAuth(false);
+            return;
+          }
+
+          // For real Supabase users, verify the session is still valid
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error("Session check error:", error);
+            // Clear invalid auth state
+            localStorage.removeItem("isAuthenticated");
+            localStorage.removeItem("userId");
+            localStorage.removeItem("userMode");
+            localStorage.removeItem("userName");
+            localStorage.removeItem("volunteerId");
+            localStorage.removeItem("currentPage");
+            setIsAuthenticated(false);
+          } else if (session && session.user.id === userId) {
+            // Valid session, restore authentication
+            setIsAuthenticated(true);
+            // Restore current page from localStorage
+            const savedPage = localStorage.getItem("currentPage");
+            if (savedPage) {
+              setCurrentPage(savedPage);
+            }
+          } else {
+            // No valid session, clear auth state
+            localStorage.removeItem("isAuthenticated");
+            localStorage.removeItem("userId");
+            localStorage.removeItem("userMode");
+            localStorage.removeItem("userName");
+            localStorage.removeItem("volunteerId");
+            localStorage.removeItem("currentPage");
+            setIsAuthenticated(false);
+          }
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error("Auth check error:", error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsCheckingAuth(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   // Check if we're on the reset password route (check both pathname and hash)
@@ -52,12 +124,42 @@ function AppContent() {
   const handleLogin = () => {
     setIsAuthenticated(true);
     setCurrentPage("home"); // Direct to home page after login
+    localStorage.setItem("currentPage", "home"); // Save home page
   };
 
-  const handleLogout = () => {
-    toast.success(t.loggedOut);
-    setIsAuthenticated(false);
-    setCurrentPage("home");
+  const handleLogout = async () => {
+    try {
+      // Sign out from Supabase if it's a real user (not a demo account)
+      const userId = localStorage.getItem("userId");
+      if (userId && !userId.startsWith("demo-")) {
+        await supabase.auth.signOut();
+      }
+
+      // Clear all auth-related localStorage
+      localStorage.removeItem("isAuthenticated");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("userMode");
+      localStorage.removeItem("userName");
+      localStorage.removeItem("volunteerId");
+      localStorage.removeItem("rememberMe");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("currentPage");
+
+      toast.success(t.loggedOut);
+      setIsAuthenticated(false);
+      setCurrentPage("home");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Still clear local state even if Supabase signout fails
+      localStorage.removeItem("isAuthenticated");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("userMode");
+      localStorage.removeItem("userName");
+      localStorage.removeItem("volunteerId");
+      localStorage.removeItem("currentPage");
+      setIsAuthenticated(false);
+      setCurrentPage("home");
+    }
   };
 
   const handleNavigation = (page: string) => {
@@ -65,6 +167,8 @@ function AppContent() {
       handleLogout();
     } else {
       setCurrentPage(page);
+      // Save current page to localStorage
+      localStorage.setItem("currentPage", page);
     }
   };
 
@@ -105,6 +209,18 @@ function AppContent() {
           }}
         />
       </>
+    );
+  }
+
+  // Show loading state while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
     );
   }
 
