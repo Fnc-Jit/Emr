@@ -349,12 +349,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
                 {/* User Login */}
                 <TabsContent value="user" className="space-y-4">
-                  <div className="p-3 bg-gray-50 dark:bg-[#313244] rounded-lg border border-gray-200 dark:border-[#45475a] text-sm text-center">
-                    <p className="text-gray-800 dark:text-[#bac2de]">
-                      <strong>Demo:</strong> user@emergency.com / user123
-                    </p>
-                  </div>
-
                   <form onSubmit={handleUserLogin} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="user-email">{t.email}</Label>
