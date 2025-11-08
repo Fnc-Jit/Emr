@@ -396,6 +396,20 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       </div>
                       <button
                         type="button"
+                        className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+                        onClick={() => {
+                          setUserEmail("rpoo9309@gmail.com");
+                          setUserPassword("user1234");
+                        }}
+                      >
+                        Demo Login
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div />
+                      <button
+                        type="button"
                         className="text-sm text-[#11111b] hover:text-gray-800 dark:text-[#b4befe] dark:hover:text-[#cba6f7] hover:underline"
                         onClick={() => {
                           setResetMode("user");
@@ -489,6 +503,20 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                           {t.rememberMe}
                         </label>
                       </div>
+                      <button
+                        type="button"
+                        className="text-sm text-green-600 hover:text-green-700 dark:text-green-400 hover:underline"
+                        onClick={() => {
+                          setVolEmail("volunteer@emergency.com");
+                          setVolPassword("emergency2024");
+                        }}
+                      >
+                        Demo Login
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div />
                       <button
                         type="button"
                         className="text-sm text-green-600 hover:text-green-700 dark:text-green-400 hover:underline"
