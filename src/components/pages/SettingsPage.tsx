@@ -1,4 +1,4 @@
-import { User, Bell, Shield, Globe, Moon, Lock, Camera, Upload, Wifi, Database, Sparkles, X, Eye, EyeOff } from "lucide-react";
+import { User, Bell, Shield, Globe, Moon, Lock, Camera, Upload, Wifi, Database, Sparkles, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Switch } from "../ui/switch";
@@ -54,9 +54,6 @@ export function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const handleDarkModeToggle = () => {
@@ -458,84 +455,45 @@ export function SettingsPage() {
               {/* Current Password */}
               <div className="space-y-2">
                 <Label htmlFor="current-password">Current Password</Label>
-                <div className="relative">
-                  <Input
-                    id="current-password"
-                    type={showCurrentPassword ? "text" : "password"}
-                    placeholder="Enter your current password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    disabled={isChangingPassword}
-                    className="h-11 pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    {showCurrentPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
+                <Input
+                  id="current-password"
+                  type="password"
+                  placeholder="Enter your current password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  disabled={isChangingPassword}
+                  className="h-11"
+                />
               </div>
 
               {/* New Password */}
               <div className="space-y-2">
                 <Label htmlFor="new-password">New Password</Label>
-                <div className="relative">
-                  <Input
-                    id="new-password"
-                    type={showNewPassword ? "text" : "password"}
-                    placeholder="Enter new password (min. 6 characters)"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    disabled={isChangingPassword}
-                    className="h-11 pr-10"
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    {showNewPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="Enter your new password (min. 6 characters)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  disabled={isChangingPassword}
+                  className="h-11"
+                  minLength={6}
+                />
               </div>
 
               {/* Confirm Password */}
               <div className="space-y-2">
                 <Label htmlFor="confirm-new-password">Confirm New Password</Label>
-                <div className="relative">
-                  <Input
-                    id="confirm-new-password"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm your new password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={isChangingPassword}
-                    className="h-11 pr-10"
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
+                <Input
+                  id="confirm-new-password"
+                  type="password"
+                  placeholder="Confirm your new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={isChangingPassword}
+                  className="h-11"
+                  minLength={6}
+                />
               </div>
 
               {/* Password Match Indicator */}

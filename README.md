@@ -98,11 +98,14 @@ src/
 
 ## 🔐 Environment Setup
 
-Create `.env` file:
+Create `.env` file (copy from `.env.example`):
 ```env
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_OPENROUTER_API_KEY=your_openrouter_api_key
 ```
+
+Get your OpenRouter API key from: https://openrouter.ai/keys
 
 ## 📝 Database Setup
 
