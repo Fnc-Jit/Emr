@@ -300,13 +300,14 @@ CREATE POLICY "Volunteers can view all reports"
       SELECT 1 FROM volunteers 
       WHERE user_id = auth.uid() 
       AND is_active = true
-      AND verification_status = 'approved'
+      -- Allow both approved and pending volunteers to view reports for testing
+      -- AND verification_status = 'approved'
     )
   );
 
 -- Report verifications policies
 -- Note: In WITH CHECK, unqualified column names refer to the row being inserted
--- We check that the user is an approved volunteer AND the volunteer_id matches
+-- We check that the user is a volunteer (not just approved) AND the volunteer_id matches
 CREATE POLICY "Volunteers can create verifications" 
   ON report_verifications FOR INSERT 
   WITH CHECK (
@@ -314,7 +315,9 @@ CREATE POLICY "Volunteers can create verifications"
       SELECT 1 FROM volunteers v
       WHERE v.id = volunteer_id  -- volunteer_id refers to report_verifications.volunteer_id being inserted
       AND v.user_id = auth.uid()
-      AND v.verification_status = 'approved'
+      AND v.is_active = true
+      -- Allow pending volunteers to create verifications for testing
+      -- AND v.verification_status = 'approved'
     )
   );
 

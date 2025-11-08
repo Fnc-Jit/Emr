@@ -1,6 +1,12 @@
 -- Test Data Seed for Emergency Reports
 -- Run this script in Supabase SQL Editor to populate test data
 
+-- IMPORTANT: Clear old test data first to avoid duplicates
+DELETE FROM emergency_reports 
+WHERE case_id LIKE 'CASE-2024-TEST-%' 
+   OR description LIKE 'I am Agam%'
+   OR description LIKE 'Jitraj%';
+
 -- Insert test reports with status 'submitted' or 'queued' for volunteers to verify
 
 INSERT INTO emergency_reports (
@@ -29,12 +35,12 @@ INSERT INTO emergency_reports (
   'CASE-2024-TEST-001',
   NULL,
   'water',
-  'Urgent water supply needed for 5 families in the area. Immediate assistance required.',
+  'Critical water shortage in residential area. Multiple families unable to access clean drinking water for past 3 days. Children and elderly at risk of dehydration.',
   'high',
   'coarse',
-  'Demo Location 1, City Center',
+  'District 5, North Ward',
   '{"lat": 12.9716, "lng": 77.5946}',
-  5,
+  8,
   false,
   true,
   false,
@@ -51,12 +57,12 @@ INSERT INTO emergency_reports (
   'CASE-2024-TEST-002',
   NULL,
   'medical',
-  'Elderly person needs medication and medical attention. Family unable to reach hospital.',
+  'Pregnant woman in labor needs immediate medical attention. No transportation available. Requires emergency ambulance and hospital admission.',
   'high',
   'coarse',
-  'Demo Location 2, City',
+  'Central Hospital Area',
   '{"lat": 12.9800, "lng": 77.6000}',
-  2,
+  3,
   false,
   true,
   false,
@@ -73,12 +79,12 @@ INSERT INTO emergency_reports (
   'CASE-2024-TEST-003',
   NULL,
   'food',
-  'Family of 4 needs food supplies. Children haven''t eaten in 2 days.',
+  'Displaced family with young children in temporary shelter. No access to food for 48 hours. Urgent need for nutrition and basic supplies.',
   'medium',
   'coarse',
-  'Demo Location 3, City',
+  'Relief Camp, Riverside',
   '{"lat": 12.9750, "lng": 77.5950}',
-  4,
+  6,
   false,
   true,
   false,
@@ -95,12 +101,12 @@ INSERT INTO emergency_reports (
   'CASE-2024-TEST-004',
   NULL,
   'shelter',
-  'Family lost their home. Need temporary shelter and basic supplies.',
+  'Entire apartment building evacuated due to structural damage. 12 families need emergency shelter and protective equipment. Weather conditions worsening.',
   'high',
   'coarse',
-  'Demo Location 4, City',
+  'East Market District',
   '{"lat": 12.9650, "lng": 77.5900}',
-  3,
+  45,
   false,
   true,
   false,
@@ -117,12 +123,12 @@ INSERT INTO emergency_reports (
   'CASE-2024-TEST-005',
   NULL,
   'medical',
-  'Child with fever needs medical consultation and medicine.',
+  'Young child suffering from severe respiratory infection and fever. Parents unable to afford treatment. Need urgent medical evaluation and prescribed medications.',
   'medium',
   'coarse',
-  'Demo Location 5, City',
+  'Slum Area, South End',
   '{"lat": 12.9680, "lng": 77.5920}',
-  1,
+  4,
   true,
   true,
   false,

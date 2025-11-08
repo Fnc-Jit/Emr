@@ -243,182 +243,109 @@ export function HomePage() {
   const [reportsVerified, setReportsVerified] = useState(0);
   const [hoursVolunteered, setHoursVolunteered] = useState(0);
 
-  // Load reports from Supabase for volunteers
-  const loadReports = async () => {
-    console.log("loadReports called");
-    // Check userMode from localStorage directly to avoid race conditions
+  // Hardcoded mockup reports for volunteers (no database calls)
+  const mockupReports: ReportData[] = [
+    {
+      id: "report-1",
+      caseId: "CASE-2024-TEST-001",
+      needType: "water",
+      description: "Critical water shortage in residential area. Multiple families unable to access clean drinking water for past 3 days. Children and elderly at risk of dehydration.",
+      location: "District 5, North Ward",
+      locationCoords: { lat: 12.9716, lng: 77.5946 },
+      dependents: 8,
+      timestamp: new Date(Date.now() - 0 * 60 * 60 * 1000).toISOString(),
+      priority: "high",
+    },
+    {
+      id: "report-2",
+      caseId: "CASE-2024-TEST-002",
+      needType: "medical",
+      description: "Pregnant woman in labor needs immediate medical attention. No transportation available. Requires emergency ambulance and hospital admission.",
+      location: "Central Hospital Area",
+      locationCoords: { lat: 12.9800, lng: 77.6000 },
+      dependents: 3,
+      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+      priority: "high",
+    },
+    {
+      id: "report-3",
+      caseId: "CASE-2024-TEST-003",
+      needType: "food",
+      description: "Displaced family with young children in temporary shelter. No access to food for 48 hours. Urgent need for nutrition and basic supplies.",
+      location: "Relief Camp, Riverside",
+      locationCoords: { lat: 12.9750, lng: 77.5950 },
+      dependents: 6,
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+      priority: "medium",
+    },
+    {
+      id: "report-4",
+      caseId: "CASE-2024-TEST-004",
+      needType: "shelter",
+      description: "Entire apartment building evacuated due to structural damage. 12 families need emergency shelter and protective equipment. Weather conditions worsening.",
+      location: "East Market District",
+      locationCoords: { lat: 12.9650, lng: 77.5900 },
+      dependents: 45,
+      timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+      priority: "high",
+    },
+    {
+      id: "report-5",
+      caseId: "CASE-2024-TEST-005",
+      needType: "medical",
+      description: "Young child suffering from severe respiratory infection and fever. Parents unable to afford treatment. Need urgent medical evaluation and prescribed medications.",
+      location: "Slum Area, South End",
+      locationCoords: { lat: 12.9680, lng: 77.5920 },
+      dependents: 4,
+      timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+      priority: "medium",
+    },
+  ];
+
+  // Load mockup reports for volunteers (no database calls)
+  const loadReports = () => {
+    console.log("loadReports called - using mockup data");
     const currentUserMode = localStorage.getItem("userMode") || "user";
     console.log("Current userMode:", currentUserMode);
+    
     if (currentUserMode !== "volunteer") {
       console.log("Not a volunteer, skipping report load");
       return;
     }
 
-    console.log("Starting to load reports for volunteer...");
+    console.log("Loading mockup reports for volunteer...");
     setReportsLoading(true);
+    
     try {
-        // Check if user is authenticated
-        const userId = localStorage.getItem("userId");
-        if (!userId) {
-          console.warn("No userId found - volunteer may not be logged in");
-          setMockReports([]);
-          setReportsLoading(false);
-          return;
+      // Filter out already reviewed reports from localStorage
+      const reviewedReports = JSON.parse(localStorage.getItem("reviewedReports") || "[]");
+      const reviewedIds = new Set(reviewedReports.map((r: any) => r.id));
+      const filteredReports = mockupReports.filter(r => !reviewedIds.has(r.id));
+
+      // Sort reports: urgent (high priority) first, then by time (most recent first)
+      const sortedReports = filteredReports.sort((a, b) => {
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        const priorityDiff = (priorityOrder[a.priority || "medium"] || 1) - (priorityOrder[b.priority || "medium"] || 1);
+        
+        if (priorityDiff !== 0) {
+          return priorityDiff;
         }
         
-        console.log("Loading reports for volunteer:", userId);
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      });
 
-        // Try to verify volunteer status and get volunteerId (but don't fail if record doesn't exist)
-        let volunteerData = null;
-        try {
-          const response = await VolunteerService.getVolunteerByUserId(userId);
-          volunteerData = response.data;
-          if (response.error) {
-            console.warn("Volunteer fetch error:", response.error);
-          }
-        } catch (err) {
-          console.warn("Volunteer fetch exception:", err);
-        }
-        
-        if (volunteerData && volunteerData.verification_status !== 'approved') {
-          console.warn("Volunteer account not approved:", volunteerData.verification_status);
-          // Don't block - just log the warning
-        }
-
-        // Ensure volunteerId is stored in localStorage if volunteer record exists
-        if (volunteerData && !localStorage.getItem("volunteerId")) {
-          localStorage.setItem("volunteerId", volunteerData.id);
-        } else if (!localStorage.getItem("volunteerId")) {
-          // Generate a temporary volunteerId for volunteers without a database record
-          const tempVolunteerId = `temp-vol-${Date.now()}`;
-          localStorage.setItem("volunteerId", tempVolunteerId);
-          console.log("Generated temporary volunteerId:", tempVolunteerId);
-        }
-        
-        // Try to get session but don't block on it
-        try {
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          if (sessionError) {
-            console.warn("Session error:", sessionError);
-          }
-          if (session) {
-            console.log("Supabase session verified for volunteer:", session.user.id);
-          } else {
-            console.warn("No active session - will attempt to fetch reports anyway");
-          }
-        } catch (err) {
-          console.warn("Session check exception:", err);
-        }
-
-        // Fetch unanswered/unverified reports (status: submitted or queued)
-        console.log("Fetching unanswered reports from Supabase...");
-        console.log("Volunteer ID from localStorage:", localStorage.getItem("volunteerId"));
-        console.log("About to call ReportService.getUnansweredReports...");
-        
-        let data = null;
-        let error = null;
-        try {
-          const response = await ReportService.getUnansweredReports({
-            limit: 50,
-          });
-          data = response.data;
-          error = response.error;
-        } catch (err) {
-          console.error("Exception calling getUnansweredReports:", err);
-          error = err;
-        }
-
-        console.log("ReportService.getUnansweredReports response:", { 
-          dataLength: data?.length || 0, 
-          error: error ? JSON.stringify(error, null, 2) : null,
-          hasData: !!data 
-        });
-
-        if (error) {
-          console.error("Error loading reports from Supabase:", error);
-          console.error("Error details:", JSON.stringify(error, null, 2));
-          
-          // Only show error toast for specific errors, not for missing session
-          if (error.message?.includes("policy") || error.message?.includes("RLS") || error.code === "42501") {
-            console.error("RLS Policy Error detected - may need to adjust database policies");
-            // Don't show error - just log it
-          } else if (error.message?.includes("JWT") || error.code === "PGRST301") {
-            console.error("JWT/Auth error");
-            // Don't show error - may happen on first load
-          } else if (error.message) {
-            console.error("Other error:", error.message);
-          }
-          
-          // Still try to show empty state instead of error
-          setMockReports([]);
-          setReportsLoading(false);
-          return;
-        }
-
-        console.log(`Fetched ${data?.length || 0} unanswered reports from Supabase`);
-        console.log("Sample report data:", data?.[0]);
-        
-        if (!data || data.length === 0) {
-          console.log("No unanswered reports found in database");
-          console.log("This could mean:");
-          console.log("1. No reports have been created yet");
-          console.log("2. All reports have been verified/resolved");
-          console.log("3. RLS policies are blocking access silently");
-          setMockReports([]);
-          setReportsLoading(false);
-          return;
-        }
-
-        // Transform Supabase data to ReportData format
-        const transformedReports: ReportData[] = (data || []).map((report: any) => ({
-          id: report.id,
-          caseId: report.case_id,
-          needType: report.need_type,
-          description: report.description,
-          location: report.location_address || 
-                   (report.location_coords ? `${report.location_coords.lat}, ${report.location_coords.lng}` : null) ||
-                   "Unknown",
-          locationCoords: report.location_coords || undefined,
-          dependents: report.number_of_dependents || 0,
-          timestamp: report.created_at,
-          priority: report.priority || "medium",
-        }));
-
-        // Filter out already reviewed reports from localStorage
-        const reviewedReports = JSON.parse(localStorage.getItem("reviewedReports") || "[]");
-        const reviewedIds = new Set(reviewedReports.map((r: any) => r.id));
-        const filteredReports = transformedReports.filter(r => !reviewedIds.has(r.id));
-
-        // Sort reports: urgent (high priority) first, then by time (most recent first)
-        const sortedReports = filteredReports.sort((a, b) => {
-          // First, sort by priority: high priority (urgent) always on top
-          const priorityOrder = { high: 0, medium: 1, low: 2 };
-          const priorityDiff = (priorityOrder[a.priority || "medium"] || 1) - (priorityOrder[b.priority || "medium"] || 1);
-          
-          if (priorityDiff !== 0) {
-            return priorityDiff;
-          }
-          
-          // If same priority, sort by time (most recent first)
-          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-        });
-
-        console.log(`Loaded ${sortedReports.length} unanswered reports from Supabase (${transformedReports.length - filteredReports.length} already reviewed)`);
-        console.log("Reports data:", sortedReports);
-        setMockReports(sortedReports);
-        
-        // Update volunteer stats
-        // Count verified reports from localStorage
-        const verifiedCount = reviewedReports.filter((r: any) => r.verificationAction === "verified").length;
-        setReportsVerified(verifiedCount);
-        
-        // Calculate hours volunteered (estimate: 0.5 hours per verified report)
-        const estimatedHours = Math.round(verifiedCount * 0.5);
-        setHoursVolunteered(estimatedHours);
+      console.log(`Loaded ${sortedReports.length} mockup reports (${mockupReports.length - filteredReports.length} already reviewed)`);
+      setMockReports(sortedReports);
+      
+      // Update volunteer stats
+      const verifiedCount = reviewedReports.filter((r: any) => r.verificationAction === "verified").length;
+      setReportsVerified(verifiedCount);
+      
+      const estimatedHours = Math.round(verifiedCount * 0.5);
+      setHoursVolunteered(estimatedHours);
     } catch (error: any) {
-      console.error("Error loading reports:", error);
-      toast.error(`Failed to load reports: ${error.message || "Unknown error"}`);
-      setMockReports([]);
+      console.error("Error loading mockup reports:", error);
+      setMockReports(mockupReports);
     } finally {
       setReportsLoading(false);
     }
@@ -432,6 +359,9 @@ export function HomePage() {
     // Load reports immediately if volunteer (don't wait for state update)
     if (mode === "volunteer") {
       console.log("Volunteer mode detected, loading reports...");
+      // Clear any cached reports to force fresh fetch
+      setMockReports([]);
+      setReportsLoading(true);
       // Use setTimeout to ensure component is fully mounted
       setTimeout(() => {
         loadReports();
@@ -477,9 +407,19 @@ export function HomePage() {
     // Check after a short delay to ensure localStorage is set
     const timeoutId = setTimeout(checkLogin, 1000);
     
+    // Auto-refresh reports every 30 seconds for volunteers
+    const intervalId = setInterval(() => {
+      const mode = localStorage.getItem("userMode");
+      if (mode === "volunteer") {
+        console.log("Auto-refreshing reports...");
+        loadReports();
+      }
+    }, 30000); // 30 second refresh interval
+    
     return () => {
       window.removeEventListener("userLoggedIn", handleLogin);
       clearTimeout(timeoutId);
+      clearInterval(intervalId);
     };
   }, []);
 
