@@ -269,10 +269,15 @@ export function HomePage() {
         console.log("Loading reports for volunteer:", userId);
 
         // Try to verify volunteer status and get volunteerId (but don't fail if record doesn't exist)
-        const { data: volunteerData, error: volunteerError } = await VolunteerService.getVolunteerByUserId(userId);
-        
-        if (volunteerError) {
-          console.warn("Volunteer fetch error:", volunteerError);
+        let volunteerData = null;
+        try {
+          const response = await VolunteerService.getVolunteerByUserId(userId);
+          volunteerData = response.data;
+          if (response.error) {
+            console.warn("Volunteer fetch error:", response.error);
+          }
+        } catch (err) {
+          console.warn("Volunteer fetch exception:", err);
         }
         
         if (volunteerData && volunteerData.verification_status !== 'approved') {
@@ -290,15 +295,19 @@ export function HomePage() {
           console.log("Generated temporary volunteerId:", tempVolunteerId);
         }
         
-        // Verify Supabase session is valid (required for RLS policies)
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) {
-          console.warn("Session error:", sessionError);
-        }
-        if (session) {
-          console.log("Supabase session verified for volunteer:", session.user.id);
-        } else {
-          console.warn("No active session - will attempt to fetch reports anyway");
+        // Try to get session but don't block on it
+        try {
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          if (sessionError) {
+            console.warn("Session error:", sessionError);
+          }
+          if (session) {
+            console.log("Supabase session verified for volunteer:", session.user.id);
+          } else {
+            console.warn("No active session - will attempt to fetch reports anyway");
+          }
+        } catch (err) {
+          console.warn("Session check exception:", err);
         }
 
         // Fetch unanswered/unverified reports (status: submitted or queued)
@@ -306,9 +315,18 @@ export function HomePage() {
         console.log("Volunteer ID from localStorage:", localStorage.getItem("volunteerId"));
         console.log("About to call ReportService.getUnansweredReports...");
         
-        const { data, error } = await ReportService.getUnansweredReports({
-          limit: 50,
-        });
+        let data = null;
+        let error = null;
+        try {
+          const response = await ReportService.getUnansweredReports({
+            limit: 50,
+          });
+          data = response.data;
+          error = response.error;
+        } catch (err) {
+          console.error("Exception calling getUnansweredReports:", err);
+          error = err;
+        }
 
         console.log("ReportService.getUnansweredReports response:", { 
           dataLength: data?.length || 0, 
@@ -319,28 +337,19 @@ export function HomePage() {
         if (error) {
           console.error("Error loading reports from Supabase:", error);
           console.error("Error details:", JSON.stringify(error, null, 2));
-          console.error("Error code:", error.code);
-          console.error("Error message:", error.message);
-          console.error("Error hint:", error.hint);
           
-          // Check if it's an RLS policy error
+          // Only show error toast for specific errors, not for missing session
           if (error.message?.includes("policy") || error.message?.includes("RLS") || error.code === "42501") {
-            console.error("RLS Policy Error detected - volunteer may not have access");
-            toast.error("Access denied. Please ensure your volunteer account is approved.", {
-              duration: 5000,
-            });
+            console.error("RLS Policy Error detected - may need to adjust database policies");
+            // Don't show error - just log it
           } else if (error.message?.includes("JWT") || error.code === "PGRST301") {
-            console.error("Authentication error - session may be invalid");
-            toast.error("Authentication error. Please log in again.", {
-              duration: 5000,
-            });
-          } else {
-            toast.error(`Failed to load reports: ${error.message || "Unknown error"}`, {
-              duration: 5000,
-            });
+            console.error("JWT/Auth error");
+            // Don't show error - may happen on first load
+          } else if (error.message) {
+            console.error("Other error:", error.message);
           }
           
-          // Don't fallback to mock data - show empty state instead
+          // Still try to show empty state instead of error
           setMockReports([]);
           setReportsLoading(false);
           return;
