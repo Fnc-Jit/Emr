@@ -17,6 +17,16 @@ try {
   console.log('📦 Installing dependencies with npm ci --include=dev...');
   execSync('npm ci --include=dev --legacy-peer-deps', { stdio: 'inherit' });
 
+  // Fix for missing @rollup/rollup-linux-x64-gnu on Netlify
+  // This is a known npm issue with optional dependencies
+  console.log('🔧 Installing rollup native bindings for Linux...');
+  try {
+    execSync('npm install --no-save @rollup/rollup-linux-x64-gnu', { stdio: 'pipe' });
+  } catch (e) {
+    // Continue even if this fails - it's optional
+    console.log('⚠️  Warning: Could not install rollup native bindings, will try without');
+  }
+
   // Verify vite is installed
   const vitePath = path.join(process.cwd(), 'node_modules', '.bin', 'vite');
   if (!fs.existsSync(vitePath)) {
